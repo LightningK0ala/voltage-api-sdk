@@ -1,5 +1,5 @@
 {
-  "name": "@lightningkoala/voltage-api-sdk",
+  "name": "voltage-api-sdk",
   "version": "0.1.0",
   "description": "Voltage API SDK",
   "type": "module",
