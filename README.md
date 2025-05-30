@@ -114,7 +114,7 @@ VOLTAGE_API_KEY=vltg_your_actual_api_key_here
 # Your organization ID (UUID format)
 VOLTAGE_ORGANIZATION_ID=your-organization-id-here
 
-# Optional: Custom base URL (defaults to https://voltageapi.com/api/v1)
+# Optional: Custom base URL (defaults to https://voltageapi.com/v1)
 VOLTAGE_BASE_URL=https://voltageapi.com/v1
 
 # Optional: Request timeout in milliseconds (defaults to 30000)
@@ -129,7 +129,7 @@ import { VoltageClient } from '@voltage/api-sdk';
 // Initialize the client with environment variables
 const client = new VoltageClient({
   apiKey: process.env.VOLTAGE_API_KEY,
-  baseUrl: process.env.VOLTAGE_BASE_URL || 'https://voltageapi.com/api/v1',
+  baseUrl: process.env.VOLTAGE_BASE_URL || 'https://voltageapi.com/v1',
   timeout: parseInt(process.env.VOLTAGE_TIMEOUT || '30000'),
 });
 
@@ -192,7 +192,7 @@ const client = new VoltageClient({
 
 ```typescript
 interface VoltageApiConfig {
-  baseUrl?: string; // API base URL, defaults to 'https://voltageapi.com/api/v1'
+  baseUrl?: string; // API base URL, defaults to 'https://voltageapi.com/v1'
   apiKey?: string; // API key for authentication
   bearerToken?: string; // Bearer token for authentication
   timeout?: number; // Request timeout in milliseconds, defaults to 30000

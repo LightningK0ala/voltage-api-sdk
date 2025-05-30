@@ -9,7 +9,7 @@ async function main() {
   // Get configuration from environment variables
   const apiKey = process.env.VOLTAGE_API_KEY;
   const organizationId = process.env.VOLTAGE_ORGANIZATION_ID;
-  const baseUrl = process.env.VOLTAGE_BASE_URL || 'https://voltageapi.com/api/v1';
+  const baseUrl = process.env.VOLTAGE_BASE_URL || 'https://voltageapi.com/v1';
   const timeout = parseInt(process.env.VOLTAGE_TIMEOUT || '30000');
 
   // Validate required environment variables
