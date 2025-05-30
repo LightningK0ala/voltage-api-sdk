@@ -327,6 +327,208 @@ describe('VoltageClient', () => {
     });
   });
 
+  describe('getPayments', () => {
+    const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
+    const environmentId = '123e4567-e89b-12d3-a456-426614174000';
+    const walletId = '7a68a525-9d11-4c1e-a3dd-1c2bf1378ba2';
+
+    const mockPayments = {
+      items: [
+        {
+          id: 'payment-1',
+          wallet_id: walletId,
+          organization_id: organizationId,
+          environment_id: environmentId,
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
+          currency: 'btc',
+          status: 'completed',
+          direction: 'send',
+          type: 'bolt11',
+          data: {
+            amount_msats: 150000,
+            max_fee_msats: 1000,
+            payment_request: 'lnbc1500n1p...',
+            fee_msats: 500,
+          },
+        },
+        {
+          id: 'payment-2',
+          wallet_id: walletId,
+          organization_id: organizationId,
+          environment_id: environmentId,
+          created_at: '2024-01-02T00:00:00Z',
+          updated_at: '2024-01-02T00:00:00Z',
+          currency: 'btc',
+          status: 'receiving',
+          direction: 'receive',
+          type: 'bolt11',
+          data: {
+            amount_msats: 200000,
+            payment_request: 'lnbc2000n1p...',
+          },
+        },
+      ],
+      offset: 0,
+      limit: 100,
+      total: 2,
+    };
+
+    beforeEach(() => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(mockPayments),
+      });
+    });
+
+    it('should get payments successfully without filters', async () => {
+      // Reset mock to ensure clean state
+      mockFetch.mockReset();
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(mockPayments),
+      });
+
+      const payments = await client.getPayments({
+        organization_id: organizationId,
+        environment_id: environmentId,
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/payments`,
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            'X-Api-Key': mockConfig.apiKey,
+            'Content-Type': 'application/json',
+          }),
+        })
+      );
+
+      expect(payments).toEqual(mockPayments);
+    });
+
+    it('should get payments with pagination filters', async () => {
+      await client.getPayments({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        offset: 10,
+        limit: 50,
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/payments?offset=10&limit=50`,
+        expect.objectContaining({
+          method: 'GET',
+        })
+      );
+    });
+
+    it('should get payments with status filters', async () => {
+      await client.getPayments({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        statuses: ['completed', 'sending'],
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/payments?statuses=completed&statuses=sending`,
+        expect.objectContaining({
+          method: 'GET',
+        })
+      );
+    });
+
+    it('should get payments with all filters', async () => {
+      await client.getPayments({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        offset: 0,
+        limit: 25,
+        wallet_id: walletId,
+        statuses: ['completed'],
+        sort_key: 'created_at',
+        sort_order: 'DESC',
+        kind: 'bolt11',
+        direction: 'send',
+        start_date: '2024-01-01T00:00:00Z',
+        end_date: '2024-01-31T23:59:59Z',
+      });
+
+      const expectedUrl = `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/payments?offset=0&limit=25&wallet_id=${walletId}&statuses=completed&sort_key=created_at&sort_order=DESC&kind=bolt11&direction=send&start_date=2024-01-01T00%3A00%3A00Z&end_date=2024-01-31T23%3A59%3A59Z`;
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expectedUrl,
+        expect.objectContaining({
+          method: 'GET',
+        })
+      );
+    });
+
+    it('should throw error when required parameters are missing', async () => {
+      await expect(
+        client.getPayments({
+          organization_id: '',
+          environment_id: environmentId,
+        })
+      ).rejects.toThrow('organization_id and environment_id are required');
+
+      await expect(
+        client.getPayments({
+          organization_id: organizationId,
+          environment_id: '',
+        })
+      ).rejects.toThrow('organization_id and environment_id are required');
+    });
+
+    it('should handle empty results', async () => {
+      const emptyPayments = {
+        items: [],
+        offset: 0,
+        limit: 100,
+        total: 0,
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(emptyPayments),
+      });
+
+      const payments = await client.getPayments({
+        organization_id: organizationId,
+        environment_id: environmentId,
+      });
+
+      expect(payments).toEqual(emptyPayments);
+    });
+
+    it('should handle API errors', async () => {
+      const errorResponse = {
+        message: 'Environment not found',
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        text: async () => JSON.stringify(errorResponse),
+      });
+
+      await expect(
+        client.getPayments({
+          organization_id: organizationId,
+          environment_id: environmentId,
+        })
+      ).rejects.toThrow();
+    });
+  });
+
   describe('sendPayment', () => {
     const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
     const environmentId = '123e4567-e89b-12d3-a456-426614174000';

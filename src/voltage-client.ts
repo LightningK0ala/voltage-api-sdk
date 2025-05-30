@@ -10,9 +10,11 @@ import type {
   CreatePaymentRequestParams,
   SendPaymentParams,
   GetPaymentParams,
+  GetPaymentsParams,
   ReceivePayment,
   SendPayment,
   Payment,
+  Payments,
   PollingConfig,
 } from './types';
 
@@ -161,6 +163,41 @@ export class VoltageClient {
       `/organizations/${organization_id}/environments/${environment_id}/payments/${payment_id}`
     );
 
+    return response.data;
+  }
+
+  /**
+   * Get all payments for an organization with optional filtering
+   * @param params - Parameters containing organization_id, environment_id, and optional filters
+   * @returns Promise resolving to paginated payments
+   */
+  async getPayments(params: GetPaymentsParams): Promise<Payments> {
+    const { organization_id, environment_id, ...filters } = params;
+
+    if (!organization_id || !environment_id) {
+      throw new Error('organization_id and environment_id are required');
+    }
+
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        if (Array.isArray(value)) {
+          // Handle array parameters like statuses
+          value.forEach(item => queryParams.append(key, item.toString()));
+        } else {
+          queryParams.append(key, value.toString());
+        }
+      }
+    });
+
+    const queryString = queryParams.toString();
+    const url = `/organizations/${organization_id}/environments/${environment_id}/payments${
+      queryString ? `?${queryString}` : ''
+    }`;
+
+    const response = await this.httpClient.get<Payments>(url);
     return response.data;
   }
 

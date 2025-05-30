@@ -335,3 +335,22 @@ export interface DeleteWalletParams {
 export type SortOrder = 'ASC' | 'DESC';
 export type SortKey = 'created_at' | 'updated_at';
 export type LedgerSortKey = 'effective_time' | 'message_time' | 'time_and_effective_time';
+
+// Payment Status Types
+export type PaymentStatus = SendStatus | ReceiveStatus;
+
+// Payment List Parameters
+export interface GetPaymentsParams {
+  organization_id?: string;
+  environment_id?: string;
+  offset?: number;
+  limit?: number;
+  wallet_id?: string;
+  statuses?: PaymentStatus[];
+  sort_key?: SortKey;
+  sort_order?: SortOrder;
+  kind?: PaymentKind;
+  direction?: PaymentDirection;
+  start_date?: string; // ISO date string
+  end_date?: string; // ISO date string
+}
