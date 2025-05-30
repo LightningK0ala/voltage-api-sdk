@@ -1,15 +1,15 @@
 {
   "name": "voltage-api-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Voltage API SDK",
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/index.cjs",
   "module": "dist/index.esm.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/index.esm.js",
-      "require": "./dist/index.js",
+      "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
     }
   },
@@ -23,12 +23,15 @@
     "dev": "rollup -c -w",
     "test": "NODE_OPTIONS='--loader=ts-node/esm' jest",
     "test:watch": "NODE_OPTIONS='--loader=ts-node/esm' jest --watch",
+    "test:compat": "npm run test:compat:cjs && npm run test:compat:esm",
+    "test:compat:cjs": "node test-cjs.cjs && node test-package-cjs.cjs",
+    "test:compat:esm": "node test-esm.mjs && node test-package-esm.mjs",
     "type-check": "tsc --noEmit",
     "lint": "eslint src --ext .ts,.tsx",
     "format": "prettier --write src/**/*.ts",
     "format:check": "prettier --check src/**/*.ts",
     "example": "tsx examples/basic-usage.ts",
-    "precommit": "npm run type-check && npm run lint && npm run test && npm run build"
+    "precommit": "npm run type-check && npm run lint && npm run test && npm run build && npm run test:compat"
   },
   "keywords": [
     "voltage",

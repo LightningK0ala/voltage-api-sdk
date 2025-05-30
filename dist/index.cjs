@@ -186,4 +186,4 @@ class VoltageClient {
 exports.HttpClient = HttpClient;
 exports.VoltageApiError = VoltageApiError;
 exports.VoltageClient = VoltageClient;
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=index.cjs.map

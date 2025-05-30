@@ -13,6 +13,37 @@ Official TypeScript/JavaScript SDK for the [Voltage Payments API](https://voltag
 - 📦 **Tree Shakable**: ES modules with tree shaking support
 - 🔐 **Secure**: Environment variable support for sensitive credentials
 
+## Module Compatibility
+
+This SDK supports both **CommonJS** and **ES Modules** out of the box, making it compatible with all modern JavaScript environments:
+
+### ES Modules (ESM)
+
+```javascript
+import { VoltageClient } from 'voltage-api-sdk';
+```
+
+### CommonJS (CJS)
+
+```javascript
+const { VoltageClient } = require('voltage-api-sdk');
+```
+
+### Compatibility Matrix
+
+| Environment         | Import Style | Status       |
+| ------------------- | ------------ | ------------ |
+| Node.js (ESM)       | `import`     | ✅ Supported |
+| Node.js (CommonJS)  | `require`    | ✅ Supported |
+| Browser (ESM)       | `import`     | ✅ Supported |
+| TypeScript          | `import`     | ✅ Supported |
+| Webpack             | Both         | ✅ Supported |
+| Rollup              | Both         | ✅ Supported |
+| Vite                | Both         | ✅ Supported |
+| n8n Community Nodes | Both         | ✅ Supported |
+
+The package uses explicit file extensions (`.cjs` for CommonJS, `.esm.js` for ES modules) to ensure maximum compatibility across all environments.
+
 ## Installation
 
 ### From npm (Recommended for production)

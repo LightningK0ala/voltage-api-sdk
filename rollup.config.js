@@ -23,13 +23,14 @@ export default [
       }),
     ],
   },
-  // CommonJS build
+  // CommonJS build - using .cjs extension for proper compatibility
   {
     input: 'src/index.ts',
     output: {
-      file: 'dist/index.js',
+      file: 'dist/index.cjs',
       format: 'cjs',
       sourcemap: true,
+      exports: 'named',
     },
     plugins: [
       resolve({ preferBuiltins: true }),
