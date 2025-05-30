@@ -243,6 +243,33 @@ export interface ReceivePaymentRequest {
   description?: string | null;
 }
 
+// Payment Creation Parameters
+export interface CreatePaymentRequestParams {
+  organization_id: string;
+  environment_id: string;
+  payment: ReceivePaymentRequest;
+}
+
+export interface GetPaymentParams {
+  organization_id: string;
+  environment_id: string;
+  payment_id: string;
+}
+
+// Polling Configuration
+export interface PollingConfig {
+  maxAttempts?: number;
+  intervalMs?: number;
+  timeoutMs?: number;
+}
+
+// Default polling configuration
+export const DEFAULT_POLLING_CONFIG: Required<PollingConfig> = {
+  maxAttempts: 30,
+  intervalMs: 1000,
+  timeoutMs: 30000,
+};
+
 // Request Parameters
 export interface GetWalletsParams {
   organization_id: string;
@@ -266,4 +293,4 @@ export interface DeleteWalletParams {
 // Sort and Filter Types
 export type SortOrder = 'ASC' | 'DESC';
 export type SortKey = 'created_at' | 'updated_at';
-export type LedgerSortKey = 'effective_time' | 'message_time' | 'time_and_effective_time'; 
+export type LedgerSortKey = 'effective_time' | 'message_time' | 'time_and_effective_time';

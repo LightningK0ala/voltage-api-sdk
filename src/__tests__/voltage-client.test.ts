@@ -121,4 +121,209 @@ describe('VoltageClient', () => {
       ).rejects.toThrow('organization_id and wallet_id are required');
     });
   });
+
+  describe('createPaymentRequest', () => {
+    const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
+    const environmentId = '123e4567-e89b-12d3-a456-426614174000';
+    const walletId = '7a68a525-9d11-4c1e-a3dd-1c2bf1378ba2';
+    const paymentId = 'payment-123';
+
+    const mockPaymentGenerating = {
+      id: paymentId,
+      wallet_id: walletId,
+      organization_id: organizationId,
+      environment_id: environmentId,
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+      currency: 'btc',
+      status: 'generating',
+      direction: 'receive',
+      type: 'bolt11',
+      data: {
+        amount_msats: 150000,
+        payment_request: null,
+        memo: 'Test payment',
+      },
+    };
+
+    const mockPaymentReady = {
+      ...mockPaymentGenerating,
+      status: 'receiving',
+      data: {
+        ...mockPaymentGenerating.data,
+        payment_request: 'lnbc1500n1p...',
+      },
+    };
+
+    beforeEach(() => {
+      // Mock the POST request (returns 202)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        text: async () => '',
+      });
+    });
+
+    it('should create payment request and poll until ready', async () => {
+      // Mock the GET requests (polling)
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => JSON.stringify(mockPaymentGenerating),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => JSON.stringify(mockPaymentReady),
+        });
+
+      const payment = await client.createPaymentRequest({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        payment: {
+          id: paymentId,
+          wallet_id: walletId,
+          currency: 'btc',
+          amount_msats: 150000,
+          payment_kind: 'bolt11',
+          description: 'Test payment',
+        },
+      });
+
+      // Should have made 3 calls: 1 POST + 2 GET
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+
+      // Verify POST call
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        1,
+        `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/payments`,
+        expect.objectContaining({
+          method: 'POST',
+        })
+      );
+
+      // Verify GET calls (polling)
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        2,
+        `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/payments/${paymentId}`,
+        expect.objectContaining({
+          method: 'GET',
+        })
+      );
+
+      expect(payment).toEqual(mockPaymentReady);
+    });
+
+    it('should handle payment generation failure', async () => {
+      const mockFailedPayment = {
+        ...mockPaymentGenerating,
+        status: 'failed',
+        error: {
+          type: 'receive_failed',
+          detail: 'Insufficient balance',
+        },
+      };
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(mockFailedPayment),
+      });
+
+      await expect(
+        client.createPaymentRequest({
+          organization_id: organizationId,
+          environment_id: environmentId,
+          payment: {
+            id: paymentId,
+            wallet_id: walletId,
+            currency: 'btc',
+            payment_kind: 'bolt11',
+          },
+        })
+      ).rejects.toThrow('Payment generation failed: Insufficient balance');
+    });
+
+    it('should timeout if polling takes too long', async () => {
+      // Mock infinite generating responses
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(mockPaymentGenerating),
+      });
+
+      await expect(
+        client.createPaymentRequest(
+          {
+            organization_id: organizationId,
+            environment_id: environmentId,
+            payment: {
+              id: paymentId,
+              wallet_id: walletId,
+              currency: 'btc',
+              payment_kind: 'bolt11',
+            },
+          },
+          {
+            maxAttempts: 2,
+            intervalMs: 100,
+            timeoutMs: 150,
+          }
+        )
+      ).rejects.toThrow('Payment polling failed after 2 attempts');
+    });
+
+    it('should throw error when required parameters are missing', async () => {
+      await expect(
+        client.createPaymentRequest({
+          organization_id: '',
+          environment_id: environmentId,
+          payment: {
+            id: paymentId,
+            wallet_id: walletId,
+            currency: 'btc',
+            payment_kind: 'bolt11',
+          },
+        })
+      ).rejects.toThrow('organization_id and environment_id are required');
+    });
+  });
+
+  describe('getPayment', () => {
+    const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
+    const environmentId = '123e4567-e89b-12d3-a456-426614174000';
+    const paymentId = 'payment-123';
+
+    it('should throw error when parameters are missing', async () => {
+      await expect(
+        client.getPayment({
+          organization_id: '',
+          environment_id: environmentId,
+          payment_id: paymentId,
+        })
+      ).rejects.toThrow('organization_id, environment_id, and payment_id are required');
+
+      await expect(
+        client.getPayment({
+          organization_id: organizationId,
+          environment_id: '',
+          payment_id: paymentId,
+        })
+      ).rejects.toThrow('organization_id, environment_id, and payment_id are required');
+
+      await expect(
+        client.getPayment({
+          organization_id: organizationId,
+          environment_id: environmentId,
+          payment_id: '',
+        })
+      ).rejects.toThrow('organization_id, environment_id, and payment_id are required');
+    });
+  });
 });

@@ -49,7 +49,7 @@ The package uses explicit file extensions (`.cjs` for CommonJS, `.esm.js` for ES
 ### From npm (Recommended for production)
 
 ```bash
-npm install @voltage/api-sdk
+npm install voltage-api-sdk
 ```
 
 ### From GitHub (Great for development)
@@ -75,7 +75,7 @@ npm install git+https://github.com/voltage-api/sdk.git#v1.0.0
 ```json
 {
   "dependencies": {
-    "@voltage/api-sdk": "git+https://github.com/voltage-api/sdk.git"
+    "voltage-api-sdk": "^0.1.2"
   }
 }
 ```
@@ -124,7 +124,7 @@ VOLTAGE_TIMEOUT=30000
 ### 3. Basic Usage
 
 ```typescript
-import { VoltageClient } from '@voltage/api-sdk';
+import { VoltageClient } from 'voltage-api-sdk';
 
 // Initialize the client with environment variables
 const client = new VoltageClient({
@@ -256,12 +256,131 @@ await client.deleteWallet({
 });
 ```
 
+### Payment Requests
+
+#### `createPaymentRequest(params, pollingConfig?)`
+
+Create a new payment request (invoice) and wait for it to be ready. This method automatically handles the polling logic to wait for the payment to be generated.
+
+**Lightning Payment Request:**
+
+```typescript
+const lightningPayment = await client.createPaymentRequest({
+  organization_id: 'your-organization-id',
+  environment_id: 'your-environment-id',
+  payment: {
+    id: crypto.randomUUID(), // Generate a unique payment ID
+    wallet_id: 'your-wallet-id',
+    currency: 'btc',
+    amount_msats: 150000, // 150 sats = 150,000 millisats
+    payment_kind: 'bolt11',
+    description: 'Payment for coffee',
+  },
+});
+
+console.log('Payment request:', lightningPayment.data.payment_request);
+```
+
+**On-chain Payment Request:**
+
+```typescript
+const onchainPayment = await client.createPaymentRequest({
+  organization_id: 'your-organization-id',
+  environment_id: 'your-environment-id',
+  payment: {
+    id: crypto.randomUUID(),
+    wallet_id: 'your-wallet-id',
+    currency: 'btc',
+    amount_msats: 1500000, // 1500 sats
+    payment_kind: 'onchain',
+    description: 'On-chain payment for services',
+  },
+});
+
+console.log('Bitcoin address:', onchainPayment.data.address);
+```
+
+**BIP21 Payment Request (Lightning + On-chain):**
+
+```typescript
+const bip21Payment = await client.createPaymentRequest({
+  organization_id: 'your-organization-id',
+  environment_id: 'your-environment-id',
+  payment: {
+    id: crypto.randomUUID(),
+    wallet_id: 'your-wallet-id',
+    currency: 'btc',
+    amount_msats: 250000, // 250 sats
+    payment_kind: 'bip21',
+    description: 'Flexible payment (Lightning or On-chain)',
+  },
+});
+
+console.log('Lightning request:', bip21Payment.data.payment_request);
+console.log('Bitcoin address:', bip21Payment.data.address);
+```
+
+**Any Amount Invoice:**
+
+```typescript
+const anyAmountPayment = await client.createPaymentRequest({
+  organization_id: 'your-organization-id',
+  environment_id: 'your-environment-id',
+  payment: {
+    id: crypto.randomUUID(),
+    wallet_id: 'your-wallet-id',
+    currency: 'btc',
+    amount_msats: null, // "any amount" invoice
+    payment_kind: 'bolt11',
+    description: 'Any amount Lightning payment',
+  },
+});
+```
+
+**Custom Polling Configuration:**
+
+```typescript
+const payment = await client.createPaymentRequest(
+  {
+    organization_id: 'your-organization-id',
+    environment_id: 'your-environment-id',
+    payment: {
+      id: crypto.randomUUID(),
+      wallet_id: 'your-wallet-id',
+      currency: 'btc',
+      amount_msats: 150000,
+      payment_kind: 'bolt11',
+      description: 'Payment with custom polling',
+    },
+  },
+  {
+    maxAttempts: 20, // Maximum polling attempts (default: 30)
+    intervalMs: 500, // Poll every 500ms (default: 1000ms)
+    timeoutMs: 10000, // Timeout after 10 seconds (default: 30000ms)
+  }
+);
+```
+
+#### `getPayment(params)`
+
+Get an existing payment by ID.
+
+```typescript
+const payment = await client.getPayment({
+  organization_id: 'your-organization-id',
+  environment_id: 'your-environment-id',
+  payment_id: 'your-payment-id',
+});
+
+console.log('Payment status:', payment.status);
+```
+
 ## Error Handling
 
 The SDK includes a custom `VoltageApiError` class that provides detailed error information:
 
 ```typescript
-import { VoltageApiError } from '@voltage/api-sdk';
+import { VoltageApiError } from 'voltage-api-sdk';
 
 try {
   const wallets = await client.getWallets({ organization_id: 'invalid-id' });
@@ -292,7 +411,7 @@ The SDK works in all modern browsers that support the `fetch` API. For older bro
 The SDK is written in TypeScript and includes comprehensive type definitions. All API responses and request parameters are fully typed:
 
 ```typescript
-import type { Wallet, VoltageApiConfig, VoltageApiError } from '@voltage/api-sdk';
+import type { Wallet, VoltageApiConfig, VoltageApiError } from 'voltage-api-sdk';
 
 // Full type safety
 const config: VoltageApiConfig = {
@@ -355,6 +474,7 @@ npm run format
 See the [examples](./examples) directory for more usage examples:
 
 - [Basic Usage](./examples/basic-usage.ts) - Complete example with environment variables
+- [Payment Requests](./examples/payment-requests.ts) - Complete examples for creating payment requests
 
 ## Security Best Practices
 

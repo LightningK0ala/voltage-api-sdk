@@ -219,6 +219,22 @@ export interface ReceivePaymentRequest {
     payment_kind: PaymentKind;
     description?: string | null;
 }
+export interface CreatePaymentRequestParams {
+    organization_id: string;
+    environment_id: string;
+    payment: ReceivePaymentRequest;
+}
+export interface GetPaymentParams {
+    organization_id: string;
+    environment_id: string;
+    payment_id: string;
+}
+export interface PollingConfig {
+    maxAttempts?: number;
+    intervalMs?: number;
+    timeoutMs?: number;
+}
+export declare const DEFAULT_POLLING_CONFIG: Required<PollingConfig>;
 export interface GetWalletsParams {
     organization_id: string;
 }
