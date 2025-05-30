@@ -432,6 +432,32 @@ class VoltageClient {
         return response.data;
     }
     /**
+     * Get a line of credit summary
+     * @param params - Parameters containing organization_id and line_id
+     * @returns Promise resolving to line of credit summary
+     */
+    async getLineOfCredit(params) {
+        const { organization_id, line_id } = params;
+        if (!organization_id || !line_id) {
+            throw new Error('organization_id and line_id are required');
+        }
+        const response = await this.httpClient.get(`/organizations/${organization_id}/lines_of_credit/${line_id}/summary`);
+        return response.data;
+    }
+    /**
+     * Get all lines of credit summaries for an organization
+     * @param params - Parameters containing organization_id
+     * @returns Promise resolving to an array of line of credit summaries
+     */
+    async getLinesOfCredit(params) {
+        const { organization_id } = params;
+        if (!organization_id) {
+            throw new Error('organization_id is required');
+        }
+        const response = await this.httpClient.get(`/organizations/${organization_id}/lines_of_credit/summaries`);
+        return response.data;
+    }
+    /**
      * Get low-level HTTP client for advanced usage
      * @returns HttpClient instance
      */

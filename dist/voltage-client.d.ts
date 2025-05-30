@@ -1,5 +1,5 @@
 import { HttpClient } from './http-client';
-import type { VoltageApiConfig, Wallet, GetWalletsParams, GetWalletParams, CreateWalletParams, DeleteWalletParams, CreatePaymentRequestParams, SendPaymentParams, GetPaymentParams, GetPaymentsParams, GetWalletLedgerParams, GetPaymentHistoryParams, ReceivePayment, SendPayment, Payment, Payments, Ledger, PaymentHistory, PollingConfig } from './types';
+import type { VoltageApiConfig, Wallet, GetWalletsParams, GetWalletParams, CreateWalletParams, DeleteWalletParams, CreatePaymentRequestParams, SendPaymentParams, GetPaymentParams, GetPaymentsParams, GetWalletLedgerParams, GetPaymentHistoryParams, GetLineOfCreditParams, GetLinesOfCreditParams, ReceivePayment, SendPayment, Payment, Payments, Ledger, PaymentHistory, LineOfCredit, PollingConfig } from './types';
 export declare class VoltageClient {
     private httpClient;
     constructor(config: VoltageApiConfig);
@@ -86,6 +86,18 @@ export declare class VoltageClient {
      * @returns Promise resolving to payment history events
      */
     getPaymentHistory(params: GetPaymentHistoryParams): Promise<PaymentHistory>;
+    /**
+     * Get a line of credit summary
+     * @param params - Parameters containing organization_id and line_id
+     * @returns Promise resolving to line of credit summary
+     */
+    getLineOfCredit(params: GetLineOfCreditParams): Promise<LineOfCredit>;
+    /**
+     * Get all lines of credit summaries for an organization
+     * @param params - Parameters containing organization_id
+     * @returns Promise resolving to an array of line of credit summaries
+     */
+    getLinesOfCredit(params: GetLinesOfCreditParams): Promise<LineOfCredit[]>;
     /**
      * Get low-level HTTP client for advanced usage
      * @returns HttpClient instance

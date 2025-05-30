@@ -13,12 +13,15 @@ import type {
   GetPaymentsParams,
   GetWalletLedgerParams,
   GetPaymentHistoryParams,
+  GetLineOfCreditParams,
+  GetLinesOfCreditParams,
   ReceivePayment,
   SendPayment,
   Payment,
   Payments,
   Ledger,
   PaymentHistory,
+  LineOfCredit,
   PollingConfig,
 } from './types';
 
@@ -435,6 +438,44 @@ export class VoltageClient {
 
     const response = await this.httpClient.get<PaymentHistory>(
       `/organizations/${organization_id}/environments/${environment_id}/payments/${payment_id}/history`
+    );
+
+    return response.data;
+  }
+
+  /**
+   * Get a line of credit summary
+   * @param params - Parameters containing organization_id and line_id
+   * @returns Promise resolving to line of credit summary
+   */
+  async getLineOfCredit(params: GetLineOfCreditParams): Promise<LineOfCredit> {
+    const { organization_id, line_id } = params;
+
+    if (!organization_id || !line_id) {
+      throw new Error('organization_id and line_id are required');
+    }
+
+    const response = await this.httpClient.get<LineOfCredit>(
+      `/organizations/${organization_id}/lines_of_credit/${line_id}/summary`
+    );
+
+    return response.data;
+  }
+
+  /**
+   * Get all lines of credit summaries for an organization
+   * @param params - Parameters containing organization_id
+   * @returns Promise resolving to an array of line of credit summaries
+   */
+  async getLinesOfCredit(params: GetLinesOfCreditParams): Promise<LineOfCredit[]> {
+    const { organization_id } = params;
+
+    if (!organization_id) {
+      throw new Error('organization_id is required');
+    }
+
+    const response = await this.httpClient.get<LineOfCredit[]>(
+      `/organizations/${organization_id}/lines_of_credit/summaries`
     );
 
     return response.data;

@@ -347,4 +347,29 @@ export interface GetPaymentHistoryParams {
     environment_id?: string;
     payment_id: string;
 }
+export type CollateralStatus = {
+    secured: SecuredStatus;
+} | {
+    verified: VerifiedStatus;
+};
+export type SecuredStatus = 'pending_deposit' | 'partially_secured' | 'secured';
+export type VerifiedStatus = 'pending_verification' | 'verified';
+export interface LineOfCredit {
+    id: string;
+    organization_id: string;
+    network: Network;
+    environment_id: string;
+    limit: number;
+    allocated_limit: number;
+    currency: Currency;
+    status?: CollateralStatus | null;
+    disabled_at?: string | null;
+}
+export interface GetLineOfCreditParams {
+    organization_id?: string;
+    line_id: string;
+}
+export interface GetLinesOfCreditParams {
+    organization_id?: string;
+}
 //# sourceMappingURL=types.d.ts.map
