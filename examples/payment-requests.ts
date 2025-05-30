@@ -11,7 +11,7 @@ async function main() {
   const baseUrl = process.env.VOLTAGE_BASE_URL || 'https://voltageapi.com/v1';
   const timeout = parseInt(process.env.VOLTAGE_TIMEOUT || '30000');
   const environmentId = process.env.VOLTAGE_ENVIRONMENT_ID;
-  const walletId = process.env.VOLTAGE_WALLET_ID;
+  const walletId = process.env.VOLTAGE_WALLET_ID!;
 
   // Initialize the client with your API key
   const client = new VoltageClient({
@@ -27,7 +27,6 @@ async function main() {
       organization_id: organizationId,
       environment_id: environmentId,
       payment: {
-        id: crypto.randomUUID(), // Generate a unique payment ID
         wallet_id: walletId,
         currency: 'btc',
         amount_msats: 150000, // 150 sats = 150,000 millisats
