@@ -12,11 +12,13 @@ import type {
   GetPaymentParams,
   GetPaymentsParams,
   GetWalletLedgerParams,
+  GetPaymentHistoryParams,
   ReceivePayment,
   SendPayment,
   Payment,
   Payments,
   Ledger,
+  PaymentHistory,
   PollingConfig,
 } from './types';
 
@@ -416,6 +418,25 @@ export class VoltageClient {
     }`;
 
     const response = await this.httpClient.get<Ledger>(url);
+    return response.data;
+  }
+
+  /**
+   * Get the history of a payment
+   * @param params - Parameters containing organization_id, environment_id, and payment_id
+   * @returns Promise resolving to payment history events
+   */
+  async getPaymentHistory(params: GetPaymentHistoryParams): Promise<PaymentHistory> {
+    const { organization_id, environment_id, payment_id } = params;
+
+    if (!organization_id || !environment_id || !payment_id) {
+      throw new Error('organization_id, environment_id, and payment_id are required');
+    }
+
+    const response = await this.httpClient.get<PaymentHistory>(
+      `/organizations/${organization_id}/environments/${environment_id}/payments/${payment_id}/history`
+    );
+
     return response.data;
   }
 

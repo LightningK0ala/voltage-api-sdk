@@ -1,5 +1,5 @@
 import { HttpClient } from './http-client';
-import type { VoltageApiConfig, Wallet, GetWalletsParams, GetWalletParams, CreateWalletParams, DeleteWalletParams, CreatePaymentRequestParams, GetPaymentParams, ReceivePayment, PollingConfig } from './types';
+import type { VoltageApiConfig, Wallet, GetWalletsParams, GetWalletParams, CreateWalletParams, DeleteWalletParams, CreatePaymentRequestParams, SendPaymentParams, GetPaymentParams, GetPaymentsParams, GetWalletLedgerParams, GetPaymentHistoryParams, ReceivePayment, SendPayment, Payment, Payments, Ledger, PaymentHistory, PollingConfig } from './types';
 export declare class VoltageClient {
     private httpClient;
     constructor(config: VoltageApiConfig);
@@ -40,7 +40,13 @@ export declare class VoltageClient {
      * @param params - Parameters containing organization_id, environment_id, and payment_id
      * @returns Promise resolving to a payment
      */
-    getPayment(params: GetPaymentParams): Promise<ReceivePayment>;
+    getPayment(params: GetPaymentParams): Promise<Payment>;
+    /**
+     * Get all payments for an organization with optional filtering
+     * @param params - Parameters containing organization_id, environment_id, and optional filters
+     * @returns Promise resolving to paginated payments
+     */
+    getPayments(params: GetPaymentsParams): Promise<Payments>;
     /**
      * Poll for a payment to be ready (status not 'generating')
      * @param params - Parameters for getting the payment
@@ -53,6 +59,33 @@ export declare class VoltageClient {
      * @param ms - Milliseconds to sleep
      */
     private sleep;
+    /**
+     * Send a payment (Lightning, On-chain, or BIP21)
+     * This method creates a send payment and waits for it to complete or fail
+     * @param params - Parameters containing organization_id, environment_id, and payment data
+     * @param pollingConfig - Optional polling configuration
+     * @returns Promise resolving to the completed payment
+     */
+    sendPayment(params: SendPaymentParams, pollingConfig?: PollingConfig): Promise<SendPayment>;
+    /**
+     * Poll for a send payment to complete (status not 'sending')
+     * @param params - Parameters for getting the payment
+     * @param config - Polling configuration
+     * @returns Promise resolving to the completed payment
+     */
+    private pollForSendPayment;
+    /**
+     * Get a wallet's transaction history (ledger)
+     * @param params - Parameters containing organization_id, wallet_id, and optional filters
+     * @returns Promise resolving to paginated ledger events
+     */
+    getWalletLedger(params: GetWalletLedgerParams): Promise<Ledger>;
+    /**
+     * Get the history of a payment
+     * @param params - Parameters containing organization_id, environment_id, and payment_id
+     * @returns Promise resolving to payment history events
+     */
+    getPaymentHistory(params: GetPaymentHistoryParams): Promise<PaymentHistory>;
     /**
      * Get low-level HTTP client for advanced usage
      * @returns HttpClient instance

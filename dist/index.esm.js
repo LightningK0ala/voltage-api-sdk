@@ -200,7 +200,6 @@ class VoltageClient {
             id: payment.id || crypto.randomUUID(),
         };
         const config = { ...DEFAULT_POLLING_CONFIG, ...pollingConfig };
-        console.log(paymentWithId);
         // Create the payment (returns 202)
         await this.httpClient.post(`/organizations/${organization_id}/environments/${environment_id}/payments`, paymentWithId);
         // Poll for the payment to be ready
@@ -224,6 +223,34 @@ class VoltageClient {
         return response.data;
     }
     /**
+     * Get all payments for an organization with optional filtering
+     * @param params - Parameters containing organization_id, environment_id, and optional filters
+     * @returns Promise resolving to paginated payments
+     */
+    async getPayments(params) {
+        const { organization_id, environment_id, ...filters } = params;
+        if (!organization_id || !environment_id) {
+            throw new Error('organization_id and environment_id are required');
+        }
+        // Build query parameters
+        const queryParams = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                if (Array.isArray(value)) {
+                    // Handle array parameters like statuses
+                    value.forEach(item => queryParams.append(key, item.toString()));
+                }
+                else {
+                    queryParams.append(key, value.toString());
+                }
+            }
+        });
+        const queryString = queryParams.toString();
+        const url = `/organizations/${organization_id}/environments/${environment_id}/payments${queryString ? `?${queryString}` : ''}`;
+        const response = await this.httpClient.get(url);
+        return response.data;
+    }
+    /**
      * Poll for a payment to be ready (status not 'generating')
      * @param params - Parameters for getting the payment
      * @param config - Polling configuration
@@ -239,22 +266,27 @@ class VoltageClient {
             }
             try {
                 const payment = await this.getPayment(params);
+                // Ensure it's a receive payment
+                if (payment.direction !== 'receive') {
+                    throw new Error('Expected receive payment but got send payment');
+                }
+                const receivePayment = payment;
                 // Check if payment is ready (not generating)
-                if (payment.status !== 'generating') {
+                if (receivePayment.status !== 'generating') {
                     // If payment failed, throw error
-                    if (payment.status === 'failed') {
+                    if (receivePayment.status === 'failed') {
                         let errorMessage = 'Payment generation failed';
-                        if (payment.error) {
-                            if (payment.error.type === 'receive_failed') {
-                                errorMessage = `Payment generation failed: ${payment.error.detail}`;
+                        if (receivePayment.error) {
+                            if (receivePayment.error.type === 'receive_failed') {
+                                errorMessage = `Payment generation failed: ${receivePayment.error.detail}`;
                             }
-                            else if (payment.error.type === 'expired') {
+                            else if (receivePayment.error.type === 'expired') {
                                 errorMessage = 'Payment generation failed: Payment expired';
                             }
                         }
                         throw new Error(errorMessage);
                     }
-                    return payment;
+                    return receivePayment;
                 }
                 // Wait before next attempt
                 await this.sleep(config.intervalMs);
@@ -281,6 +313,123 @@ class VoltageClient {
      */
     sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+    /**
+     * Send a payment (Lightning, On-chain, or BIP21)
+     * This method creates a send payment and waits for it to complete or fail
+     * @param params - Parameters containing organization_id, environment_id, and payment data
+     * @param pollingConfig - Optional polling configuration
+     * @returns Promise resolving to the completed payment
+     */
+    async sendPayment(params, pollingConfig) {
+        const { organization_id, environment_id, payment } = params;
+        if (!organization_id || !environment_id) {
+            throw new Error('organization_id and environment_id are required');
+        }
+        if (!payment) {
+            throw new Error('payment data is required');
+        }
+        // Auto-generate payment ID if not provided
+        const paymentWithId = {
+            ...payment,
+            id: payment.id || crypto.randomUUID(),
+        };
+        const config = { ...DEFAULT_POLLING_CONFIG, ...pollingConfig };
+        // Create the payment (returns 202)
+        await this.httpClient.post(`/organizations/${organization_id}/environments/${environment_id}/payments`, paymentWithId);
+        // Poll for the payment to complete
+        return this.pollForSendPayment({
+            organization_id,
+            environment_id,
+            payment_id: paymentWithId.id,
+        }, config);
+    }
+    /**
+     * Poll for a send payment to complete (status not 'sending')
+     * @param params - Parameters for getting the payment
+     * @param config - Polling configuration
+     * @returns Promise resolving to the completed payment
+     */
+    async pollForSendPayment(params, config) {
+        const startTime = Date.now();
+        let attempts = 0;
+        while (attempts < config.maxAttempts) {
+            // Check timeout
+            if (Date.now() - startTime > config.timeoutMs) {
+                throw new Error(`Send payment polling timed out after ${config.timeoutMs}ms`);
+            }
+            try {
+                const payment = await this.getPayment(params);
+                // Ensure it's a send payment
+                if (payment.direction !== 'send') {
+                    throw new Error('Expected send payment but got receive payment');
+                }
+                const sendPayment = payment;
+                // Check if payment is complete (not sending)
+                if (sendPayment.status !== 'sending') {
+                    // If payment failed, throw error
+                    if (sendPayment.status === 'failed') {
+                        let errorMessage = 'Send payment failed';
+                        if (sendPayment.error) {
+                            errorMessage = `Send payment failed: ${sendPayment.error.detail}`;
+                        }
+                        throw new Error(errorMessage);
+                    }
+                    return sendPayment;
+                }
+                // Wait before next attempt
+                await this.sleep(config.intervalMs);
+                attempts++;
+            }
+            catch (error) {
+                // If it's our timeout error or payment failed error, re-throw
+                if (error instanceof Error && error.message.includes('timed out')) {
+                    throw error;
+                }
+                if (error instanceof Error && error.message.includes('Send payment failed')) {
+                    throw error;
+                }
+                // For other errors (like 404), wait and retry
+                await this.sleep(config.intervalMs);
+                attempts++;
+            }
+        }
+        throw new Error(`Send payment polling failed after ${config.maxAttempts} attempts`);
+    }
+    /**
+     * Get a wallet's transaction history (ledger)
+     * @param params - Parameters containing organization_id, wallet_id, and optional filters
+     * @returns Promise resolving to paginated ledger events
+     */
+    async getWalletLedger(params) {
+        const { organization_id, wallet_id, ...filters } = params;
+        if (!organization_id || !wallet_id) {
+            throw new Error('organization_id and wallet_id are required');
+        }
+        // Build query parameters
+        const queryParams = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                queryParams.append(key, value.toString());
+            }
+        });
+        const queryString = queryParams.toString();
+        const url = `/organizations/${organization_id}/wallets/${wallet_id}/ledger${queryString ? `?${queryString}` : ''}`;
+        const response = await this.httpClient.get(url);
+        return response.data;
+    }
+    /**
+     * Get the history of a payment
+     * @param params - Parameters containing organization_id, environment_id, and payment_id
+     * @returns Promise resolving to payment history events
+     */
+    async getPaymentHistory(params) {
+        const { organization_id, environment_id, payment_id } = params;
+        if (!organization_id || !environment_id || !payment_id) {
+            throw new Error('organization_id, environment_id, and payment_id are required');
+        }
+        const response = await this.httpClient.get(`/organizations/${organization_id}/environments/${environment_id}/payments/${payment_id}/history`);
+        return response.data;
     }
     /**
      * Get low-level HTTP client for advanced usage

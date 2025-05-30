@@ -327,6 +327,151 @@ describe('VoltageClient', () => {
     });
   });
 
+  describe('getPaymentHistory', () => {
+    const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
+    const environmentId = '123e4567-e89b-12d3-a456-426614174000';
+    const paymentId = 'payment-123';
+
+    const mockPaymentHistory = {
+      events: [
+        {
+          event_type: 'payment_created',
+          time: '2024-01-01T00:00:00Z',
+          position: 1,
+        },
+        {
+          event_type: 'payment_sending',
+          time: '2024-01-01T00:01:00Z',
+          position: 2,
+        },
+        {
+          event_type: 'payment_completed',
+          time: '2024-01-01T00:02:00Z',
+          position: 3,
+        },
+      ],
+    };
+
+    beforeEach(() => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(mockPaymentHistory),
+      });
+    });
+
+    it('should get payment history successfully', async () => {
+      // Reset mock to ensure clean state
+      mockFetch.mockReset();
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(mockPaymentHistory),
+      });
+
+      const history = await client.getPaymentHistory({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        payment_id: paymentId,
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/payments/${paymentId}/history`,
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            'X-Api-Key': mockConfig.apiKey,
+            'Content-Type': 'application/json',
+          }),
+        })
+      );
+
+      expect(history).toEqual(mockPaymentHistory);
+    });
+
+    it('should throw error when required parameters are missing', async () => {
+      await expect(
+        client.getPaymentHistory({
+          organization_id: '',
+          environment_id: environmentId,
+          payment_id: paymentId,
+        })
+      ).rejects.toThrow('organization_id, environment_id, and payment_id are required');
+
+      await expect(
+        client.getPaymentHistory({
+          organization_id: organizationId,
+          environment_id: '',
+          payment_id: paymentId,
+        })
+      ).rejects.toThrow('organization_id, environment_id, and payment_id are required');
+
+      await expect(
+        client.getPaymentHistory({
+          organization_id: organizationId,
+          environment_id: environmentId,
+          payment_id: '',
+        })
+      ).rejects.toThrow('organization_id, environment_id, and payment_id are required');
+    });
+
+    it('should handle payment history with errors', async () => {
+      const historyWithError = {
+        events: [
+          {
+            event_type: 'payment_created',
+            time: '2024-01-01T00:00:00Z',
+            position: 1,
+          },
+          {
+            event_type: 'payment_failed',
+            error: 'Insufficient balance',
+            time: '2024-01-01T00:01:00Z',
+            position: 2,
+          },
+        ],
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(historyWithError),
+      });
+
+      const history = await client.getPaymentHistory({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        payment_id: paymentId,
+      });
+
+      expect(history).toEqual(historyWithError);
+    });
+
+    it('should handle API errors', async () => {
+      const errorResponse = {
+        message: 'Payment not found',
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        text: async () => JSON.stringify(errorResponse),
+      });
+
+      await expect(
+        client.getPaymentHistory({
+          organization_id: organizationId,
+          environment_id: environmentId,
+          payment_id: paymentId,
+        })
+      ).rejects.toThrow();
+    });
+  });
+
   describe('getWalletLedger', () => {
     const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
     const walletId = '7a68a525-9d11-4c1e-a3dd-1c2bf1378ba2';

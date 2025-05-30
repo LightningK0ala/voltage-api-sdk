@@ -385,3 +385,22 @@ export interface GetWalletLedgerParams {
   sort_key?: LedgerSortKey;
   sort_order?: SortOrder;
 }
+
+// Payment History Types
+export interface EventHistory {
+  event_type: string;
+  error?: string | null;
+  time: string; // ISO date string
+  position: number;
+}
+
+export interface PaymentHistory {
+  events: EventHistory[];
+}
+
+// Payment History Parameters
+export interface GetPaymentHistoryParams {
+  organization_id?: string;
+  environment_id?: string;
+  payment_id: string;
+}

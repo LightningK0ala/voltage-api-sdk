@@ -219,10 +219,49 @@ export interface ReceivePaymentRequest {
     payment_kind: PaymentKind;
     description?: string | null;
 }
+export interface SendBolt11PaymentRequest {
+    payment_request: string;
+    amount_msats?: number | null;
+    max_fee_msats?: number | null;
+}
+export interface SendOnChainPaymentRequest {
+    address: string;
+    amount_sats: number;
+    max_fee_sats?: number | null;
+    description?: string | null;
+}
+export interface SendBip21PaymentRequest {
+    address: string;
+    payment_request?: string | null;
+    amount_msats?: number | null;
+    max_fee_msats?: number | null;
+    description?: string | null;
+}
+export type SendPaymentTypeRequest = {
+    type: 'bolt11';
+    data: SendBolt11PaymentRequest;
+} | {
+    type: 'onchain';
+    data: SendOnChainPaymentRequest;
+} | {
+    type: 'bip21';
+    data: SendBip21PaymentRequest;
+};
+export interface SendPaymentRequest {
+    id?: string;
+    wallet_id: string;
+    currency: Currency;
+}
+export type SendPaymentRequestData = SendPaymentRequest & SendPaymentTypeRequest;
 export interface CreatePaymentRequestParams {
     organization_id?: string;
     environment_id?: string;
     payment: ReceivePaymentRequest;
+}
+export interface SendPaymentParams {
+    organization_id?: string;
+    environment_id?: string;
+    payment: SendPaymentRequestData;
 }
 export interface GetPaymentParams {
     organization_id?: string;
@@ -253,4 +292,59 @@ export interface DeleteWalletParams {
 export type SortOrder = 'ASC' | 'DESC';
 export type SortKey = 'created_at' | 'updated_at';
 export type LedgerSortKey = 'effective_time' | 'message_time' | 'time_and_effective_time';
+export type PaymentStatus = SendStatus | ReceiveStatus;
+export interface GetPaymentsParams {
+    organization_id?: string;
+    environment_id?: string;
+    offset?: number;
+    limit?: number;
+    wallet_id?: string;
+    statuses?: PaymentStatus[];
+    sort_key?: SortKey;
+    sort_order?: SortOrder;
+    kind?: PaymentKind;
+    direction?: PaymentDirection;
+    start_date?: string;
+    end_date?: string;
+}
+export interface LedgerEvent {
+    type: 'credited' | 'captured' | 'held' | 'released';
+    hold_id?: string;
+    credit_id?: string;
+    payment_id: string;
+    amount_msats?: number;
+    currency: Currency;
+    effective_time: string;
+}
+export interface Ledger {
+    items: LedgerEvent[];
+    offset: number;
+    limit: number;
+    total: number;
+}
+export interface GetWalletLedgerParams {
+    organization_id?: string;
+    wallet_id: string;
+    offset?: number;
+    limit?: number;
+    payment_id?: string;
+    start_date?: string;
+    end_date?: string;
+    sort_key?: LedgerSortKey;
+    sort_order?: SortOrder;
+}
+export interface EventHistory {
+    event_type: string;
+    error?: string | null;
+    time: string;
+    position: number;
+}
+export interface PaymentHistory {
+    events: EventHistory[];
+}
+export interface GetPaymentHistoryParams {
+    organization_id?: string;
+    environment_id?: string;
+    payment_id: string;
+}
 //# sourceMappingURL=types.d.ts.map
