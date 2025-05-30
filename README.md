@@ -260,7 +260,7 @@ await client.deleteWallet({
 
 #### `createPaymentRequest(params, pollingConfig?)`
 
-Create a new payment request (invoice) and wait for it to be ready. This method automatically handles the polling logic to wait for the payment to be generated.
+Create a new payment request (invoice) and wait for it to be ready. Payment IDs are automatically generated if not provided. This method automatically handles the polling logic to wait for the payment to be generated.
 
 **Lightning Payment Request:**
 
@@ -269,7 +269,7 @@ const lightningPayment = await client.createPaymentRequest({
   organization_id: 'your-organization-id',
   environment_id: 'your-environment-id',
   payment: {
-    id: crypto.randomUUID(), // Generate a unique payment ID
+    // id is optional - will be auto-generated if not provided
     wallet_id: 'your-wallet-id',
     currency: 'btc',
     amount_msats: 150000, // 150 sats = 150,000 millisats
@@ -288,7 +288,7 @@ const onchainPayment = await client.createPaymentRequest({
   organization_id: 'your-organization-id',
   environment_id: 'your-environment-id',
   payment: {
-    id: crypto.randomUUID(),
+    // id: "custom-payment-id", // Optional - auto-generated if not provided
     wallet_id: 'your-wallet-id',
     currency: 'btc',
     amount_msats: 1500000, // 1500 sats
@@ -307,7 +307,7 @@ const bip21Payment = await client.createPaymentRequest({
   organization_id: 'your-organization-id',
   environment_id: 'your-environment-id',
   payment: {
-    id: crypto.randomUUID(),
+    // id: "custom-payment-id", // Optional - auto-generated if not provided
     wallet_id: 'your-wallet-id',
     currency: 'btc',
     amount_msats: 250000, // 250 sats
@@ -327,7 +327,7 @@ const anyAmountPayment = await client.createPaymentRequest({
   organization_id: 'your-organization-id',
   environment_id: 'your-environment-id',
   payment: {
-    id: crypto.randomUUID(),
+    // id: "custom-payment-id", // Optional - auto-generated if not provided
     wallet_id: 'your-wallet-id',
     currency: 'btc',
     amount_msats: null, // "any amount" invoice
@@ -345,7 +345,7 @@ const payment = await client.createPaymentRequest(
     organization_id: 'your-organization-id',
     environment_id: 'your-environment-id',
     payment: {
-      id: crypto.randomUUID(),
+      // id: "custom-payment-id", // Optional - auto-generated if not provided
       wallet_id: 'your-wallet-id',
       currency: 'btc',
       amount_msats: 150000,

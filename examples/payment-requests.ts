@@ -1,23 +1,24 @@
-/**
- * Example: Creating Payment Requests (Invoices)
- *
- * This example demonstrates how to create different types of payment requests
- * using the Voltage API SDK. The SDK automatically handles the polling logic
- * to wait for the payment request to be ready.
- */
+import { VoltageClient } from '../src/index.js';
+import dotenv from 'dotenv';
 
-import { VoltageClient } from '../src';
+// Load environment variables from .env file
+dotenv.config();
 
-async function createPaymentRequestExamples() {
-  // Initialize the client with your API credentials
+async function main() {
+  // Get configuration from environment variables
+  const apiKey = process.env.VOLTAGE_API_KEY;
+  const organizationId = process.env.VOLTAGE_ORGANIZATION_ID;
+  const baseUrl = process.env.VOLTAGE_BASE_URL || 'https://voltageapi.com/v1';
+  const timeout = parseInt(process.env.VOLTAGE_TIMEOUT || '30000');
+  const environmentId = process.env.VOLTAGE_ENVIRONMENT_ID;
+  const walletId = process.env.VOLTAGE_WALLET_ID;
+
+  // Initialize the client with your API key
   const client = new VoltageClient({
-    apiKey: 'your-api-key', // or use bearerToken for user authentication
-    baseUrl: 'https://voltageapi.com/api/v1', // Optional: defaults to production
+    apiKey,
+    baseUrl,
+    timeout,
   });
-
-  const organizationId = 'your-organization-id';
-  const environmentId = 'your-environment-id';
-  const walletId = 'your-wallet-id';
 
   try {
     // Example 1: Create a Lightning (Bolt11) Payment Request
@@ -145,9 +146,5 @@ async function createPaymentRequestExamples() {
   }
 }
 
-// Run the examples
-if (require.main === module) {
-  createPaymentRequestExamples().catch(console.error);
-}
-
-export { createPaymentRequestExamples };
+// Run the example
+main().catch(console.error);

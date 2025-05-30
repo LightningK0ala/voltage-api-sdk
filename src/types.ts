@@ -46,7 +46,7 @@ export type SupportedNetwork = 'mainnet' | 'testnet3' | 'mutinynet';
 
 // Balance Types
 export interface Balance {
-  id: string;
+  id?: string;
   wallet_id: string;
   effective_time: string;
   available: SignedAmount;
@@ -57,22 +57,22 @@ export interface Balance {
 
 // Hold Types
 export interface Hold {
-  id: string;
+  id?: string;
   amount: SignedAmount;
   effective_time: string;
 }
 
 // Wallet Types
 export interface Wallet {
-  id: string;
+  id?: string;
   active: boolean;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
   deletion_failed_at?: string | null;
   name: string;
-  organization_id: string;
-  environment_id: string;
+  organization_id?: string;
+  environment_id?: string;
   limit?: number | null;
   line_of_credit_id?: string | null;
   network: Network;
@@ -83,9 +83,9 @@ export interface Wallet {
 }
 
 export interface NewWalletRequest {
-  id: string;
-  environment_id: string;
-  line_of_credit_id: string;
+  id?: string;
+  environment_id?: string;
+  line_of_credit_id?: string;
   name: string;
   network: SupportedNetwork;
   limit: number;
@@ -107,7 +107,7 @@ export type ReceiveStatus = 'generating' | 'receiving' | 'expired' | 'failed' | 
 // On-chain Receipt Types
 export interface OnChainPaymentReceipt {
   required_confirmations_num: number;
-  tx_id: string;
+  tx_id?: string;
   ledger_id?: string | null;
   height_mined_at?: number | null;
   amount_sats: number;
@@ -176,10 +176,10 @@ export type PaymentSendType =
 
 // Base Payment Interface
 export interface BasePayment {
-  id: string;
+  id?: string;
   wallet_id: string;
-  organization_id: string;
-  environment_id: string;
+  organization_id?: string;
+  environment_id?: string;
   created_at: string;
   updated_at: string;
   currency: Currency;
@@ -213,7 +213,7 @@ export type ReceiveError = { type: 'receive_failed'; detail: string } | { type: 
 
 // Frozen Payment Types
 export interface OnChainPaymentFrozen {
-  tx_id: string;
+  tx_id?: string;
   address: string;
   amount_sats: number;
   reason: Reasons;
@@ -235,7 +235,7 @@ export type Payments = PaginatedResponse<Payment>;
 
 // Request Types
 export interface ReceivePaymentRequest {
-  id: string;
+  id?: string;
   wallet_id: string;
   currency: Currency;
   amount_msats?: number | null;
@@ -245,15 +245,15 @@ export interface ReceivePaymentRequest {
 
 // Payment Creation Parameters
 export interface CreatePaymentRequestParams {
-  organization_id: string;
-  environment_id: string;
+  organization_id?: string;
+  environment_id?: string;
   payment: ReceivePaymentRequest;
 }
 
 export interface GetPaymentParams {
-  organization_id: string;
-  environment_id: string;
-  payment_id: string;
+  organization_id?: string;
+  environment_id?: string;
+  payment_id?: string;
 }
 
 // Polling Configuration
@@ -272,21 +272,21 @@ export const DEFAULT_POLLING_CONFIG: Required<PollingConfig> = {
 
 // Request Parameters
 export interface GetWalletsParams {
-  organization_id: string;
+  organization_id?: string;
 }
 
 export interface GetWalletParams {
-  organization_id: string;
+  organization_id?: string;
   wallet_id: string;
 }
 
 export interface CreateWalletParams {
-  organization_id: string;
+  organization_id?: string;
   wallet: NewWalletRequest;
 }
 
 export interface DeleteWalletParams {
-  organization_id: string;
+  organization_id?: string;
   wallet_id: string;
 }
 

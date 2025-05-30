@@ -194,14 +194,19 @@ class VoltageClient {
         if (!payment) {
             throw new Error('payment data is required');
         }
+        // Auto-generate payment ID if not provided
+        const paymentWithId = {
+            ...payment,
+            id: payment.id || `payment_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+        };
         const config = { ...DEFAULT_POLLING_CONFIG, ...pollingConfig };
         // Create the payment (returns 202)
-        await this.httpClient.post(`/organizations/${organization_id}/environments/${environment_id}/payments`, payment);
+        await this.httpClient.post(`/organizations/${organization_id}/environments/${environment_id}/payments`, paymentWithId);
         // Poll for the payment to be ready
         return this.pollForPayment({
             organization_id,
             environment_id,
-            payment_id: payment.id,
+            payment_id: paymentWithId.id,
         }, config);
     }
     /**

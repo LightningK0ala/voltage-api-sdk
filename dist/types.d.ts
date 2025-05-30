@@ -33,7 +33,7 @@ export interface SignedAmount {
 export type Network = 'mainnet' | 'testnet' | 'signet' | 'mutinynet';
 export type SupportedNetwork = 'mainnet' | 'testnet3' | 'mutinynet';
 export interface Balance {
-    id: string;
+    id?: string;
     wallet_id: string;
     effective_time: string;
     available: SignedAmount;
@@ -42,20 +42,20 @@ export interface Balance {
     currency: Currency;
 }
 export interface Hold {
-    id: string;
+    id?: string;
     amount: SignedAmount;
     effective_time: string;
 }
 export interface Wallet {
-    id: string;
+    id?: string;
     active: boolean;
     created_at: string;
     updated_at: string;
     deleted_at?: string | null;
     deletion_failed_at?: string | null;
     name: string;
-    organization_id: string;
-    environment_id: string;
+    organization_id?: string;
+    environment_id?: string;
     limit?: number | null;
     line_of_credit_id?: string | null;
     network: Network;
@@ -65,9 +65,9 @@ export interface Wallet {
     error?: WalletEventError | null;
 }
 export interface NewWalletRequest {
-    id: string;
-    environment_id: string;
-    line_of_credit_id: string;
+    id?: string;
+    environment_id?: string;
+    line_of_credit_id?: string;
     name: string;
     network: SupportedNetwork;
     limit: number;
@@ -87,7 +87,7 @@ export type SendStatus = 'sending' | 'failed' | 'completed';
 export type ReceiveStatus = 'generating' | 'receiving' | 'expired' | 'failed' | 'completed';
 export interface OnChainPaymentReceipt {
     required_confirmations_num: number;
-    tx_id: string;
+    tx_id?: string;
     ledger_id?: string | null;
     height_mined_at?: number | null;
     amount_sats: number;
@@ -155,10 +155,10 @@ export type PaymentSendType = {
     data: SendBip21PaymentData;
 };
 export interface BasePayment {
-    id: string;
+    id?: string;
     wallet_id: string;
-    organization_id: string;
-    environment_id: string;
+    organization_id?: string;
+    environment_id?: string;
     created_at: string;
     updated_at: string;
     currency: Currency;
@@ -192,7 +192,7 @@ export type ReceiveError = {
     type: 'expired';
 };
 export interface OnChainPaymentFrozen {
-    tx_id: string;
+    tx_id?: string;
     address: string;
     amount_sats: number;
     reason: Reasons;
@@ -212,7 +212,7 @@ export interface PaginatedResponse<T> {
 }
 export type Payments = PaginatedResponse<Payment>;
 export interface ReceivePaymentRequest {
-    id: string;
+    id?: string;
     wallet_id: string;
     currency: Currency;
     amount_msats?: number | null;
@@ -220,14 +220,14 @@ export interface ReceivePaymentRequest {
     description?: string | null;
 }
 export interface CreatePaymentRequestParams {
-    organization_id: string;
-    environment_id: string;
+    organization_id?: string;
+    environment_id?: string;
     payment: ReceivePaymentRequest;
 }
 export interface GetPaymentParams {
-    organization_id: string;
-    environment_id: string;
-    payment_id: string;
+    organization_id?: string;
+    environment_id?: string;
+    payment_id?: string;
 }
 export interface PollingConfig {
     maxAttempts?: number;
@@ -236,18 +236,18 @@ export interface PollingConfig {
 }
 export declare const DEFAULT_POLLING_CONFIG: Required<PollingConfig>;
 export interface GetWalletsParams {
-    organization_id: string;
+    organization_id?: string;
 }
 export interface GetWalletParams {
-    organization_id: string;
+    organization_id?: string;
     wallet_id: string;
 }
 export interface CreateWalletParams {
-    organization_id: string;
+    organization_id?: string;
     wallet: NewWalletRequest;
 }
 export interface DeleteWalletParams {
-    organization_id: string;
+    organization_id?: string;
     wallet_id: string;
 }
 export type SortOrder = 'ASC' | 'DESC';
