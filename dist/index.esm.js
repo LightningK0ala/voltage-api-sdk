@@ -197,9 +197,10 @@ class VoltageClient {
         // Auto-generate payment ID if not provided
         const paymentWithId = {
             ...payment,
-            id: payment.id || `payment_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+            id: payment.id || crypto.randomUUID(),
         };
         const config = { ...DEFAULT_POLLING_CONFIG, ...pollingConfig };
+        console.log(paymentWithId);
         // Create the payment (returns 202)
         await this.httpClient.post(`/organizations/${organization_id}/environments/${environment_id}/payments`, paymentWithId);
         // Poll for the payment to be ready
