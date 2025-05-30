@@ -1415,4 +1415,641 @@ describe('VoltageClient', () => {
       ).rejects.toThrow();
     });
   });
+
+  describe('getWebhooks', () => {
+    const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
+    const environmentId = '123e4567-e89b-12d3-a456-426614174000';
+
+    const mockWebhooks = [
+      {
+        id: 'webhook-123',
+        organization_id: organizationId,
+        environment_id: environmentId,
+        url: 'https://example.com/webhook',
+        name: 'Test Webhook',
+        events: [{ send: ['succeeded', 'failed'] }, { receive: ['generated', 'completed'] }],
+        status: 'active',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+        stopped_at: null,
+        deleted_at: null,
+      },
+      {
+        id: 'webhook-456',
+        organization_id: organizationId,
+        environment_id: environmentId,
+        url: 'https://api.example.com/payments',
+        name: 'Payment Notifications',
+        events: [{ test: ['created'] }],
+        status: 'stopped',
+        created_at: '2024-01-02T00:00:00Z',
+        updated_at: '2024-01-02T00:00:00Z',
+        stopped_at: '2024-01-03T00:00:00Z',
+        deleted_at: null,
+      },
+    ];
+
+    beforeEach(() => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(mockWebhooks),
+      });
+    });
+
+    it('should get webhooks successfully without filters', async () => {
+      // Reset mock to ensure clean state
+      mockFetch.mockReset();
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(mockWebhooks),
+      });
+
+      const webhooks = await client.getWebhooks({
+        organization_id: organizationId,
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/organizations/${organizationId}/webhooks`,
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            'X-Api-Key': mockConfig.apiKey,
+            'Content-Type': 'application/json',
+          }),
+        })
+      );
+
+      expect(webhooks).toEqual(mockWebhooks);
+    });
+
+    it('should get webhooks with filters', async () => {
+      await client.getWebhooks({
+        organization_id: organizationId,
+        environment_ids: [environmentId],
+        statuses: ['active', 'stopped'],
+        sort_key: 'created_at',
+        sort_order: 'DESC',
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/organizations/${organizationId}/webhooks?environment_ids=${environmentId}&statuses=active&statuses=stopped&sort_key=created_at&sort_order=DESC`,
+        expect.objectContaining({
+          method: 'GET',
+        })
+      );
+    });
+
+    it('should throw error when organization_id is missing', async () => {
+      await expect(
+        client.getWebhooks({
+          organization_id: '',
+        })
+      ).rejects.toThrow('organization_id is required');
+    });
+
+    it('should handle empty results', async () => {
+      const emptyWebhooks: any[] = [];
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(emptyWebhooks),
+      });
+
+      const webhooks = await client.getWebhooks({
+        organization_id: organizationId,
+      });
+
+      expect(webhooks).toEqual(emptyWebhooks);
+    });
+
+    it('should handle API errors', async () => {
+      const errorResponse = {
+        message: 'Organization not found',
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        text: async () => JSON.stringify(errorResponse),
+      });
+
+      await expect(
+        client.getWebhooks({
+          organization_id: organizationId,
+        })
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('getWebhook', () => {
+    const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
+    const environmentId = '123e4567-e89b-12d3-a456-426614174000';
+    const webhookId = 'webhook-123';
+
+    const mockWebhook = {
+      id: webhookId,
+      organization_id: organizationId,
+      environment_id: environmentId,
+      url: 'https://example.com/webhook',
+      name: 'Test Webhook',
+      events: [{ send: ['succeeded', 'failed'] }],
+      status: 'active',
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+      stopped_at: null,
+      deleted_at: null,
+    };
+
+    beforeEach(() => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(mockWebhook),
+      });
+    });
+
+    it('should get webhook successfully', async () => {
+      // Reset mock to ensure clean state
+      mockFetch.mockReset();
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(mockWebhook),
+      });
+
+      const webhook = await client.getWebhook({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        webhook_id: webhookId,
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/webhooks/${webhookId}`,
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            'X-Api-Key': mockConfig.apiKey,
+            'Content-Type': 'application/json',
+          }),
+        })
+      );
+
+      expect(webhook).toEqual(mockWebhook);
+    });
+
+    it('should throw error when required parameters are missing', async () => {
+      await expect(
+        client.getWebhook({
+          organization_id: '',
+          environment_id: environmentId,
+          webhook_id: webhookId,
+        })
+      ).rejects.toThrow('organization_id, environment_id, and webhook_id are required');
+
+      await expect(
+        client.getWebhook({
+          organization_id: organizationId,
+          environment_id: '',
+          webhook_id: webhookId,
+        })
+      ).rejects.toThrow('organization_id, environment_id, and webhook_id are required');
+
+      await expect(
+        client.getWebhook({
+          organization_id: organizationId,
+          environment_id: environmentId,
+          webhook_id: '',
+        })
+      ).rejects.toThrow('organization_id, environment_id, and webhook_id are required');
+    });
+
+    it('should handle API errors', async () => {
+      const errorResponse = {
+        message: 'Webhook not found',
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        text: async () => JSON.stringify(errorResponse),
+      });
+
+      await expect(
+        client.getWebhook({
+          organization_id: organizationId,
+          environment_id: environmentId,
+          webhook_id: webhookId,
+        })
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('createWebhook', () => {
+    const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
+    const environmentId = '123e4567-e89b-12d3-a456-426614174000';
+    const webhookId = 'webhook-123';
+
+    const mockWebhookSecret = {
+      id: webhookId,
+      shared_secret: 'vltg_GDtRrrJFJ6afRrAYMW3t9RpxgCdcT8zp',
+    };
+
+    beforeEach(() => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        text: async () => JSON.stringify(mockWebhookSecret),
+      });
+    });
+
+    it('should create webhook successfully', async () => {
+      // Reset mock to ensure clean state
+      mockFetch.mockReset();
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        text: async () => JSON.stringify(mockWebhookSecret),
+      });
+
+      const webhookSecret = await client.createWebhook({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        webhook: {
+          id: webhookId,
+          url: 'https://example.com/webhook',
+          name: 'Test Webhook',
+          events: [{ send: ['succeeded', 'failed'] }],
+        },
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/webhooks`,
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'X-Api-Key': mockConfig.apiKey,
+            'Content-Type': 'application/json',
+          }),
+        })
+      );
+
+      expect(webhookSecret).toEqual(mockWebhookSecret);
+    });
+
+    it('should auto-generate webhook ID if not provided', async () => {
+      // Mock crypto.randomUUID for consistent testing
+      const mockUUID = 'auto-generated-webhook-uuid';
+      global.crypto = {
+        randomUUID: jest.fn().mockReturnValue(mockUUID),
+      } as any;
+
+      const mockWebhookSecretWithAutoId = {
+        ...mockWebhookSecret,
+        id: mockUUID,
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        text: async () => JSON.stringify(mockWebhookSecretWithAutoId),
+      });
+
+      const webhookSecret = await client.createWebhook({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        webhook: {
+          url: 'https://example.com/webhook',
+          name: 'Test Webhook',
+          events: [{ send: ['succeeded', 'failed'] }],
+        },
+      });
+
+      expect(webhookSecret.id).toBe(mockUUID);
+    });
+
+    it('should throw error when required parameters are missing', async () => {
+      await expect(
+        client.createWebhook({
+          organization_id: '',
+          environment_id: environmentId,
+          webhook: {
+            url: 'https://example.com/webhook',
+            name: 'Test Webhook',
+            events: [{ send: ['succeeded', 'failed'] }],
+          },
+        })
+      ).rejects.toThrow('organization_id and environment_id are required');
+
+      await expect(
+        client.createWebhook({
+          organization_id: organizationId,
+          environment_id: environmentId,
+          webhook: null as any,
+        })
+      ).rejects.toThrow('webhook data is required');
+    });
+  });
+
+  describe('updateWebhook', () => {
+    const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
+    const environmentId = '123e4567-e89b-12d3-a456-426614174000';
+    const webhookId = 'webhook-123';
+
+    beforeEach(() => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        text: async () => '',
+      });
+    });
+
+    it('should update webhook successfully', async () => {
+      // Reset mock to ensure clean state
+      mockFetch.mockReset();
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        text: async () => '',
+      });
+
+      await client.updateWebhook({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        webhook_id: webhookId,
+        webhook: {
+          url: 'https://new-example.com/webhook',
+          name: 'Updated Webhook',
+          events: [{ receive: ['generated', 'completed'] }],
+        },
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/webhooks/${webhookId}`,
+        expect.objectContaining({
+          method: 'PATCH',
+          headers: expect.objectContaining({
+            'X-Api-Key': mockConfig.apiKey,
+            'Content-Type': 'application/json',
+          }),
+        })
+      );
+    });
+
+    it('should throw error when required parameters are missing', async () => {
+      await expect(
+        client.updateWebhook({
+          organization_id: '',
+          environment_id: environmentId,
+          webhook_id: webhookId,
+          webhook: {
+            url: 'https://example.com/webhook',
+            events: [{ send: ['succeeded'] }],
+          },
+        })
+      ).rejects.toThrow('organization_id, environment_id, and webhook_id are required');
+
+      await expect(
+        client.updateWebhook({
+          organization_id: organizationId,
+          environment_id: environmentId,
+          webhook_id: webhookId,
+          webhook: null as any,
+        })
+      ).rejects.toThrow('webhook data is required');
+    });
+  });
+
+  describe('deleteWebhook', () => {
+    const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
+    const environmentId = '123e4567-e89b-12d3-a456-426614174000';
+    const webhookId = 'webhook-123';
+
+    beforeEach(() => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        text: async () => '',
+      });
+    });
+
+    it('should delete webhook successfully', async () => {
+      // Reset mock to ensure clean state
+      mockFetch.mockReset();
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        text: async () => '',
+      });
+
+      await client.deleteWebhook({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        webhook_id: webhookId,
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/webhooks/${webhookId}`,
+        expect.objectContaining({
+          method: 'DELETE',
+          headers: expect.objectContaining({
+            'X-Api-Key': mockConfig.apiKey,
+            'Content-Type': 'application/json',
+          }),
+        })
+      );
+    });
+
+    it('should throw error when required parameters are missing', async () => {
+      await expect(
+        client.deleteWebhook({
+          organization_id: '',
+          environment_id: environmentId,
+          webhook_id: webhookId,
+        })
+      ).rejects.toThrow('organization_id, environment_id, and webhook_id are required');
+    });
+  });
+
+  describe('startWebhook', () => {
+    const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
+    const environmentId = '123e4567-e89b-12d3-a456-426614174000';
+    const webhookId = 'webhook-123';
+
+    beforeEach(() => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        text: async () => '',
+      });
+    });
+
+    it('should start webhook successfully', async () => {
+      // Reset mock to ensure clean state
+      mockFetch.mockReset();
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        text: async () => '',
+      });
+
+      await client.startWebhook({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        webhook_id: webhookId,
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/webhooks/${webhookId}/start`,
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'X-Api-Key': mockConfig.apiKey,
+            'Content-Type': 'application/json',
+          }),
+        })
+      );
+    });
+
+    it('should throw error when required parameters are missing', async () => {
+      await expect(
+        client.startWebhook({
+          organization_id: '',
+          environment_id: environmentId,
+          webhook_id: webhookId,
+        })
+      ).rejects.toThrow('organization_id, environment_id, and webhook_id are required');
+    });
+  });
+
+  describe('stopWebhook', () => {
+    const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
+    const environmentId = '123e4567-e89b-12d3-a456-426614174000';
+    const webhookId = 'webhook-123';
+
+    beforeEach(() => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        text: async () => '',
+      });
+    });
+
+    it('should stop webhook successfully', async () => {
+      // Reset mock to ensure clean state
+      mockFetch.mockReset();
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        text: async () => '',
+      });
+
+      await client.stopWebhook({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        webhook_id: webhookId,
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/webhooks/${webhookId}/stop`,
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'X-Api-Key': mockConfig.apiKey,
+            'Content-Type': 'application/json',
+          }),
+        })
+      );
+    });
+
+    it('should throw error when required parameters are missing', async () => {
+      await expect(
+        client.stopWebhook({
+          organization_id: '',
+          environment_id: environmentId,
+          webhook_id: webhookId,
+        })
+      ).rejects.toThrow('organization_id, environment_id, and webhook_id are required');
+    });
+  });
+
+  describe('generateWebhookKey', () => {
+    const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
+    const environmentId = '123e4567-e89b-12d3-a456-426614174000';
+    const webhookId = 'webhook-123';
+
+    const mockWebhookSecret = {
+      id: webhookId,
+      shared_secret: 'vltg_NewGeneratedSecretKey123',
+    };
+
+    beforeEach(() => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        text: async () => JSON.stringify(mockWebhookSecret),
+      });
+    });
+
+    it('should generate webhook key successfully', async () => {
+      // Reset mock to ensure clean state
+      mockFetch.mockReset();
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        text: async () => JSON.stringify(mockWebhookSecret),
+      });
+
+      const webhookSecret = await client.generateWebhookKey({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        webhook_id: webhookId,
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/webhooks/${webhookId}/keys`,
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'X-Api-Key': mockConfig.apiKey,
+            'Content-Type': 'application/json',
+          }),
+        })
+      );
+
+      expect(webhookSecret).toEqual(mockWebhookSecret);
+    });
+
+    it('should throw error when required parameters are missing', async () => {
+      await expect(
+        client.generateWebhookKey({
+          organization_id: '',
+          environment_id: environmentId,
+          webhook_id: webhookId,
+        })
+      ).rejects.toThrow('organization_id, environment_id, and webhook_id are required');
+    });
+  });
 });

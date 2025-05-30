@@ -1,5 +1,5 @@
 import { HttpClient } from './http-client';
-import type { VoltageApiConfig, Wallet, GetWalletsParams, GetWalletParams, CreateWalletParams, DeleteWalletParams, CreatePaymentRequestParams, SendPaymentParams, GetPaymentParams, GetPaymentsParams, GetWalletLedgerParams, GetPaymentHistoryParams, GetLineOfCreditParams, GetLinesOfCreditParams, ReceivePayment, SendPayment, Payment, Payments, Ledger, PaymentHistory, LineOfCredit, PollingConfig } from './types';
+import type { VoltageApiConfig, Wallet, GetWalletsParams, GetWalletParams, CreateWalletParams, DeleteWalletParams, CreatePaymentRequestParams, SendPaymentParams, GetPaymentParams, GetPaymentsParams, GetWalletLedgerParams, GetPaymentHistoryParams, GetLineOfCreditParams, GetLinesOfCreditParams, GetWebhooksParams, GetWebhookParams, CreateWebhookParams, UpdateWebhookParams, DeleteWebhookParams, StartWebhookParams, StopWebhookParams, GenerateWebhookKeyParams, ReceivePayment, SendPayment, Payment, Payments, Ledger, PaymentHistory, LineOfCredit, Webhook, WebhookSecret, PollingConfig } from './types';
 export declare class VoltageClient {
     private httpClient;
     constructor(config: VoltageApiConfig);
@@ -98,6 +98,54 @@ export declare class VoltageClient {
      * @returns Promise resolving to an array of line of credit summaries
      */
     getLinesOfCredit(params: GetLinesOfCreditParams): Promise<LineOfCredit[]>;
+    /**
+     * Get all webhooks for an organization with optional filtering
+     * @param params - Parameters containing organization_id and optional filters
+     * @returns Promise resolving to an array of webhooks
+     */
+    getWebhooks(params: GetWebhooksParams): Promise<Webhook[]>;
+    /**
+     * Get a specific webhook
+     * @param params - Parameters containing organization_id, environment_id, and webhook_id
+     * @returns Promise resolving to a webhook
+     */
+    getWebhook(params: GetWebhookParams): Promise<Webhook>;
+    /**
+     * Create a new webhook
+     * @param params - Parameters containing organization_id, environment_id, and webhook data
+     * @returns Promise resolving to webhook secret information
+     */
+    createWebhook(params: CreateWebhookParams): Promise<WebhookSecret>;
+    /**
+     * Update a webhook
+     * @param params - Parameters containing organization_id, environment_id, webhook_id, and webhook data
+     * @returns Promise resolving when webhook update is complete
+     */
+    updateWebhook(params: UpdateWebhookParams): Promise<void>;
+    /**
+     * Delete a webhook
+     * @param params - Parameters containing organization_id, environment_id, and webhook_id
+     * @returns Promise resolving when webhook deletion is complete
+     */
+    deleteWebhook(params: DeleteWebhookParams): Promise<void>;
+    /**
+     * Start a webhook
+     * @param params - Parameters containing organization_id, environment_id, and webhook_id
+     * @returns Promise resolving when webhook start request is complete
+     */
+    startWebhook(params: StartWebhookParams): Promise<void>;
+    /**
+     * Stop a webhook
+     * @param params - Parameters containing organization_id, environment_id, and webhook_id
+     * @returns Promise resolving when webhook stop request is complete
+     */
+    stopWebhook(params: StopWebhookParams): Promise<void>;
+    /**
+     * Generate a new key for a webhook
+     * @param params - Parameters containing organization_id, environment_id, and webhook_id
+     * @returns Promise resolving to new webhook secret information
+     */
+    generateWebhookKey(params: GenerateWebhookKeyParams): Promise<WebhookSecret>;
     /**
      * Get low-level HTTP client for advanced usage
      * @returns HttpClient instance

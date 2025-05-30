@@ -458,6 +458,132 @@ class VoltageClient {
         return response.data;
     }
     /**
+     * Get all webhooks for an organization with optional filtering
+     * @param params - Parameters containing organization_id and optional filters
+     * @returns Promise resolving to an array of webhooks
+     */
+    async getWebhooks(params) {
+        const { organization_id, ...filters } = params;
+        if (!organization_id) {
+            throw new Error('organization_id is required');
+        }
+        // Build query parameters
+        const queryParams = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                if (Array.isArray(value)) {
+                    // Handle array parameters like environment_ids and statuses
+                    value.forEach(item => queryParams.append(key, item.toString()));
+                }
+                else {
+                    queryParams.append(key, value.toString());
+                }
+            }
+        });
+        const queryString = queryParams.toString();
+        const url = `/organizations/${organization_id}/webhooks${queryString ? `?${queryString}` : ''}`;
+        const response = await this.httpClient.get(url);
+        return response.data;
+    }
+    /**
+     * Get a specific webhook
+     * @param params - Parameters containing organization_id, environment_id, and webhook_id
+     * @returns Promise resolving to a webhook
+     */
+    async getWebhook(params) {
+        const { organization_id, environment_id, webhook_id } = params;
+        if (!organization_id || !environment_id || !webhook_id) {
+            throw new Error('organization_id, environment_id, and webhook_id are required');
+        }
+        const response = await this.httpClient.get(`/organizations/${organization_id}/environments/${environment_id}/webhooks/${webhook_id}`);
+        return response.data;
+    }
+    /**
+     * Create a new webhook
+     * @param params - Parameters containing organization_id, environment_id, and webhook data
+     * @returns Promise resolving to webhook secret information
+     */
+    async createWebhook(params) {
+        const { organization_id, environment_id, webhook } = params;
+        if (!organization_id || !environment_id) {
+            throw new Error('organization_id and environment_id are required');
+        }
+        if (!webhook) {
+            throw new Error('webhook data is required');
+        }
+        // Auto-generate webhook ID if not provided
+        const webhookWithId = {
+            ...webhook,
+            id: webhook.id || crypto.randomUUID(),
+        };
+        const response = await this.httpClient.post(`/organizations/${organization_id}/environments/${environment_id}/webhooks`, webhookWithId);
+        return response.data;
+    }
+    /**
+     * Update a webhook
+     * @param params - Parameters containing organization_id, environment_id, webhook_id, and webhook data
+     * @returns Promise resolving when webhook update is complete
+     */
+    async updateWebhook(params) {
+        const { organization_id, environment_id, webhook_id, webhook } = params;
+        if (!organization_id || !environment_id || !webhook_id) {
+            throw new Error('organization_id, environment_id, and webhook_id are required');
+        }
+        if (!webhook) {
+            throw new Error('webhook data is required');
+        }
+        await this.httpClient.patch(`/organizations/${organization_id}/environments/${environment_id}/webhooks/${webhook_id}`, webhook);
+    }
+    /**
+     * Delete a webhook
+     * @param params - Parameters containing organization_id, environment_id, and webhook_id
+     * @returns Promise resolving when webhook deletion is complete
+     */
+    async deleteWebhook(params) {
+        const { organization_id, environment_id, webhook_id } = params;
+        if (!organization_id || !environment_id || !webhook_id) {
+            throw new Error('organization_id, environment_id, and webhook_id are required');
+        }
+        await this.httpClient.delete(`/organizations/${organization_id}/environments/${environment_id}/webhooks/${webhook_id}`);
+    }
+    /**
+     * Start a webhook
+     * @param params - Parameters containing organization_id, environment_id, and webhook_id
+     * @returns Promise resolving when webhook start request is complete
+     */
+    async startWebhook(params) {
+        const { organization_id, environment_id, webhook_id } = params;
+        if (!organization_id || !environment_id || !webhook_id) {
+            throw new Error('organization_id, environment_id, and webhook_id are required');
+        }
+        await this.httpClient.post(`/organizations/${organization_id}/environments/${environment_id}/webhooks/${webhook_id}/start`);
+    }
+    /**
+     * Stop a webhook
+     * @param params - Parameters containing organization_id, environment_id, and webhook_id
+     * @returns Promise resolving when webhook stop request is complete
+     */
+    async stopWebhook(params) {
+        const { organization_id, environment_id, webhook_id } = params;
+        if (!organization_id || !environment_id || !webhook_id) {
+            throw new Error('organization_id, environment_id, and webhook_id are required');
+        }
+        await this.httpClient.post(`/organizations/${organization_id}/environments/${environment_id}/webhooks/${webhook_id}/stop`);
+    }
+    /**
+     * Generate a new key for a webhook
+     * @param params - Parameters containing organization_id, environment_id, and webhook_id
+     * @returns Promise resolving to new webhook secret information
+     */
+    async generateWebhookKey(params) {
+        const { organization_id, environment_id, webhook_id } = params;
+        if (!organization_id || !environment_id || !webhook_id) {
+            throw new Error('organization_id, environment_id, and webhook_id are required');
+        }
+        const response = await this.httpClient.post(`/organizations/${organization_id}/environments/${environment_id}/webhooks/${webhook_id}/keys`);
+        return response.data;
+    }
+    /**
      * Get low-level HTTP client for advanced usage
      * @returns HttpClient instance
      */

@@ -372,4 +372,86 @@ export interface GetLineOfCreditParams {
 export interface GetLinesOfCreditParams {
     organization_id?: string;
 }
+export type WebhookStatus = 'active' | 'stopped' | 'deleted';
+export type SendEventTypes = 'succeeded' | 'failed';
+export type ReceiveEventTypes = 'generated' | 'refreshed' | 'expired' | 'succeeded' | 'completed' | 'failed';
+export type TestEventTypes = 'created';
+export type EventTypes = {
+    send: SendEventTypes[];
+} | {
+    receive: ReceiveEventTypes[];
+} | {
+    test: TestEventTypes[];
+};
+export interface Webhook {
+    id: string;
+    organization_id: string;
+    environment_id: string;
+    url: string;
+    name: string;
+    events: EventTypes[];
+    status: WebhookStatus;
+    created_at: string;
+    updated_at: string;
+    stopped_at?: string | null;
+    deleted_at?: string | null;
+}
+export interface NewWebhookRequest {
+    id?: string;
+    url: string;
+    name: string;
+    events: EventTypes[];
+}
+export interface UpdateWebhookRequest {
+    url: string;
+    name?: string | null;
+    events: EventTypes[];
+}
+export interface WebhookSecret {
+    id: string;
+    shared_secret: string;
+}
+export interface GetWebhooksParams {
+    organization_id?: string;
+    environment_ids?: string[];
+    statuses?: WebhookStatus[];
+    sort_key?: SortKey;
+    sort_order?: SortOrder;
+}
+export interface GetWebhookParams {
+    organization_id?: string;
+    environment_id?: string;
+    webhook_id: string;
+}
+export interface CreateWebhookParams {
+    organization_id?: string;
+    environment_id?: string;
+    webhook: NewWebhookRequest;
+}
+export interface UpdateWebhookParams {
+    organization_id?: string;
+    environment_id?: string;
+    webhook_id: string;
+    webhook: UpdateWebhookRequest;
+}
+export interface DeleteWebhookParams {
+    organization_id?: string;
+    environment_id?: string;
+    webhook_id: string;
+}
+export interface StartWebhookParams {
+    organization_id?: string;
+    environment_id?: string;
+    webhook_id: string;
+}
+export interface StopWebhookParams {
+    organization_id?: string;
+    environment_id?: string;
+    webhook_id: string;
+}
+export interface GenerateWebhookKeyParams {
+    organization_id?: string;
+    environment_id?: string;
+    webhook_id: string;
+}
 //# sourceMappingURL=types.d.ts.map
