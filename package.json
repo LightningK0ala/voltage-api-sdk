@@ -1,6 +1,6 @@
 {
   "name": "voltage-api-sdk",
-  "version": "0.1.3",
+  "version": "0.2.1",
   "description": "Voltage API SDK",
   "type": "module",
   "main": "dist/index.cjs",
