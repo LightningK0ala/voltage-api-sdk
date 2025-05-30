@@ -8,8 +8,11 @@ import type {
   CreateWalletParams,
   DeleteWalletParams,
   CreatePaymentRequestParams,
+  SendPaymentParams,
   GetPaymentParams,
   ReceivePayment,
+  SendPayment,
+  Payment,
   PollingConfig,
 } from './types';
 
@@ -125,8 +128,6 @@ export class VoltageClient {
 
     const config = { ...DEFAULT_POLLING_CONFIG, ...pollingConfig };
 
-    console.log(paymentWithId);
-
     // Create the payment (returns 202)
     await this.httpClient.post(
       `/organizations/${organization_id}/environments/${environment_id}/payments`,
@@ -149,14 +150,14 @@ export class VoltageClient {
    * @param params - Parameters containing organization_id, environment_id, and payment_id
    * @returns Promise resolving to a payment
    */
-  async getPayment(params: GetPaymentParams): Promise<ReceivePayment> {
+  async getPayment(params: GetPaymentParams): Promise<Payment> {
     const { organization_id, environment_id, payment_id } = params;
 
     if (!organization_id || !environment_id || !payment_id) {
       throw new Error('organization_id, environment_id, and payment_id are required');
     }
 
-    const response = await this.httpClient.get<ReceivePayment>(
+    const response = await this.httpClient.get<Payment>(
       `/organizations/${organization_id}/environments/${environment_id}/payments/${payment_id}`
     );
 
@@ -185,22 +186,29 @@ export class VoltageClient {
       try {
         const payment = await this.getPayment(params);
 
+        // Ensure it's a receive payment
+        if (payment.direction !== 'receive') {
+          throw new Error('Expected receive payment but got send payment');
+        }
+
+        const receivePayment = payment as ReceivePayment;
+
         // Check if payment is ready (not generating)
-        if (payment.status !== 'generating') {
+        if (receivePayment.status !== 'generating') {
           // If payment failed, throw error
-          if (payment.status === 'failed') {
+          if (receivePayment.status === 'failed') {
             let errorMessage = 'Payment generation failed';
-            if (payment.error) {
-              if (payment.error.type === 'receive_failed') {
-                errorMessage = `Payment generation failed: ${payment.error.detail}`;
-              } else if (payment.error.type === 'expired') {
+            if (receivePayment.error) {
+              if (receivePayment.error.type === 'receive_failed') {
+                errorMessage = `Payment generation failed: ${receivePayment.error.detail}`;
+              } else if (receivePayment.error.type === 'expired') {
                 errorMessage = 'Payment generation failed: Payment expired';
               }
             }
             throw new Error(errorMessage);
           }
 
-          return payment;
+          return receivePayment;
         }
 
         // Wait before next attempt
@@ -230,6 +238,116 @@ export class VoltageClient {
    */
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
+   * Send a payment (Lightning, On-chain, or BIP21)
+   * This method creates a send payment and waits for it to complete or fail
+   * @param params - Parameters containing organization_id, environment_id, and payment data
+   * @param pollingConfig - Optional polling configuration
+   * @returns Promise resolving to the completed payment
+   */
+  async sendPayment(
+    params: SendPaymentParams,
+    pollingConfig?: PollingConfig
+  ): Promise<SendPayment> {
+    const { organization_id, environment_id, payment } = params;
+
+    if (!organization_id || !environment_id) {
+      throw new Error('organization_id and environment_id are required');
+    }
+
+    if (!payment) {
+      throw new Error('payment data is required');
+    }
+
+    // Auto-generate payment ID if not provided
+    const paymentWithId = {
+      ...payment,
+      id: payment.id || crypto.randomUUID(),
+    };
+
+    const config = { ...DEFAULT_POLLING_CONFIG, ...pollingConfig };
+
+    // Create the payment (returns 202)
+    await this.httpClient.post(
+      `/organizations/${organization_id}/environments/${environment_id}/payments`,
+      paymentWithId
+    );
+
+    // Poll for the payment to complete
+    return this.pollForSendPayment(
+      {
+        organization_id,
+        environment_id,
+        payment_id: paymentWithId.id,
+      },
+      config
+    );
+  }
+
+  /**
+   * Poll for a send payment to complete (status not 'sending')
+   * @param params - Parameters for getting the payment
+   * @param config - Polling configuration
+   * @returns Promise resolving to the completed payment
+   */
+  private async pollForSendPayment(
+    params: GetPaymentParams,
+    config: Required<PollingConfig>
+  ): Promise<SendPayment> {
+    const startTime = Date.now();
+    let attempts = 0;
+
+    while (attempts < config.maxAttempts) {
+      // Check timeout
+      if (Date.now() - startTime > config.timeoutMs) {
+        throw new Error(`Send payment polling timed out after ${config.timeoutMs}ms`);
+      }
+
+      try {
+        const payment = await this.getPayment(params);
+
+        // Ensure it's a send payment
+        if (payment.direction !== 'send') {
+          throw new Error('Expected send payment but got receive payment');
+        }
+
+        const sendPayment = payment as SendPayment;
+
+        // Check if payment is complete (not sending)
+        if (sendPayment.status !== 'sending') {
+          // If payment failed, throw error
+          if (sendPayment.status === 'failed') {
+            let errorMessage = 'Send payment failed';
+            if (sendPayment.error) {
+              errorMessage = `Send payment failed: ${sendPayment.error.detail}`;
+            }
+            throw new Error(errorMessage);
+          }
+
+          return sendPayment;
+        }
+
+        // Wait before next attempt
+        await this.sleep(config.intervalMs);
+        attempts++;
+      } catch (error) {
+        // If it's our timeout error or payment failed error, re-throw
+        if (error instanceof Error && error.message.includes('timed out')) {
+          throw error;
+        }
+        if (error instanceof Error && error.message.includes('Send payment failed')) {
+          throw error;
+        }
+
+        // For other errors (like 404), wait and retry
+        await this.sleep(config.intervalMs);
+        attempts++;
+      }
+    }
+
+    throw new Error(`Send payment polling failed after ${config.maxAttempts} attempts`);
   }
 
   /**

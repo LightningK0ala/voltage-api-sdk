@@ -243,11 +243,52 @@ export interface ReceivePaymentRequest {
   description?: string | null;
 }
 
+// Send Payment Request Types
+export interface SendBolt11PaymentRequest {
+  payment_request: string;
+  amount_msats?: number | null;
+  max_fee_msats?: number | null;
+}
+
+export interface SendOnChainPaymentRequest {
+  address: string;
+  amount_sats: number;
+  max_fee_sats?: number | null;
+  description?: string | null;
+}
+
+export interface SendBip21PaymentRequest {
+  address: string;
+  payment_request?: string | null;
+  amount_msats?: number | null;
+  max_fee_msats?: number | null;
+  description?: string | null;
+}
+
+export type SendPaymentTypeRequest =
+  | { type: 'bolt11'; data: SendBolt11PaymentRequest }
+  | { type: 'onchain'; data: SendOnChainPaymentRequest }
+  | { type: 'bip21'; data: SendBip21PaymentRequest };
+
+export interface SendPaymentRequest {
+  id?: string;
+  wallet_id: string;
+  currency: Currency;
+}
+
+export type SendPaymentRequestData = SendPaymentRequest & SendPaymentTypeRequest;
+
 // Payment Creation Parameters
 export interface CreatePaymentRequestParams {
   organization_id?: string;
   environment_id?: string;
   payment: ReceivePaymentRequest;
+}
+
+export interface SendPaymentParams {
+  organization_id?: string;
+  environment_id?: string;
+  payment: SendPaymentRequestData;
 }
 
 export interface GetPaymentParams {

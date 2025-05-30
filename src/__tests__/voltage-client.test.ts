@@ -326,4 +326,330 @@ describe('VoltageClient', () => {
       ).rejects.toThrow('organization_id, environment_id, and payment_id are required');
     });
   });
+
+  describe('sendPayment', () => {
+    const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
+    const environmentId = '123e4567-e89b-12d3-a456-426614174000';
+    const walletId = '7a68a525-9d11-4c1e-a3dd-1c2bf1378ba2';
+    const paymentId = 'send-payment-123';
+
+    const mockSendPaymentSending = {
+      id: paymentId,
+      wallet_id: walletId,
+      organization_id: organizationId,
+      environment_id: environmentId,
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z',
+      currency: 'btc',
+      status: 'sending',
+      direction: 'send',
+      type: 'bolt11',
+      data: {
+        amount_msats: 150000,
+        max_fee_msats: 1000,
+        payment_request: 'lnbc1500n1p...',
+        memo: 'Test send payment',
+      },
+    };
+
+    const mockSendPaymentCompleted = {
+      ...mockSendPaymentSending,
+      status: 'completed',
+      data: {
+        ...mockSendPaymentSending.data,
+        fee_msats: 500,
+      },
+    };
+
+    it('should send bolt11 payment and poll until completed', async () => {
+      // Reset mock to ensure clean state
+      mockFetch.mockReset();
+
+      // Mock the POST request (returns 202)
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 202,
+          statusText: 'Accepted',
+          text: async () => '',
+        })
+        // Mock the GET requests (polling)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => JSON.stringify(mockSendPaymentSending),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => JSON.stringify(mockSendPaymentCompleted),
+        });
+
+      const payment = await client.sendPayment({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        payment: {
+          id: paymentId,
+          wallet_id: walletId,
+          currency: 'btc',
+          type: 'bolt11',
+          data: {
+            payment_request: 'lnbc1500n1p...',
+            amount_msats: 150000,
+            max_fee_msats: 1000,
+          },
+        },
+      });
+
+      // Should have made 3 calls: 1 POST + 2 GET
+      expect(mockFetch).toHaveBeenCalledTimes(3);
+
+      // Verify POST call
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        1,
+        `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/payments`,
+        expect.objectContaining({
+          method: 'POST',
+        })
+      );
+
+      // Verify GET calls (polling)
+      expect(mockFetch).toHaveBeenNthCalledWith(
+        2,
+        `${mockConfig.baseUrl}/organizations/${organizationId}/environments/${environmentId}/payments/${paymentId}`,
+        expect.objectContaining({
+          method: 'GET',
+        })
+      );
+
+      expect(payment).toEqual(mockSendPaymentCompleted);
+    });
+
+    it('should send onchain payment and poll until completed', async () => {
+      const mockOnchainSending = {
+        ...mockSendPaymentSending,
+        type: 'onchain',
+        data: {
+          address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
+          amount_sats: 150,
+          max_fee_sats: 10,
+          outflows: [],
+        },
+      };
+
+      const mockOnchainCompleted = {
+        ...mockOnchainSending,
+        status: 'completed',
+        data: {
+          ...mockOnchainSending.data,
+          fee_sats: 5,
+          outflows: [
+            {
+              required_confirmations_num: 1,
+              tx_id: 'a22ec88f7a84a705466c9cd8d37024155ffa7930300fcee4fed9e5cc4e25904e',
+              amount_sats: 150,
+            },
+          ],
+        },
+      };
+
+      // Mock the POST request and GET requests (polling)
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 202,
+          statusText: 'Accepted',
+          text: async () => '',
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => JSON.stringify(mockOnchainSending),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => JSON.stringify(mockOnchainCompleted),
+        });
+
+      const payment = await client.sendPayment({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        payment: {
+          id: paymentId,
+          wallet_id: walletId,
+          currency: 'btc',
+          type: 'onchain',
+          data: {
+            address: 'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh',
+            amount_sats: 150,
+            max_fee_sats: 10,
+          },
+        },
+      });
+
+      expect(payment).toEqual(mockOnchainCompleted);
+    });
+
+    it('should handle send payment failure', async () => {
+      const mockFailedPayment = {
+        ...mockSendPaymentSending,
+        status: 'failed',
+        error: {
+          type: 'send_failed',
+          detail: 'Insufficient balance',
+        },
+      };
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 202,
+          statusText: 'Accepted',
+          text: async () => '',
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => JSON.stringify(mockFailedPayment),
+        });
+
+      await expect(
+        client.sendPayment({
+          organization_id: organizationId,
+          environment_id: environmentId,
+          payment: {
+            id: paymentId,
+            wallet_id: walletId,
+            currency: 'btc',
+            type: 'bolt11',
+            data: {
+              payment_request: 'lnbc1500n1p...',
+              amount_msats: 150000,
+              max_fee_msats: 1000,
+            },
+          },
+        })
+      ).rejects.toThrow('Send payment failed: Insufficient balance');
+    });
+
+    it('should timeout if send payment polling takes too long', async () => {
+      // Mock the POST request first, then infinite sending responses
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 202,
+          statusText: 'Accepted',
+          text: async () => '',
+        })
+        .mockResolvedValue({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => JSON.stringify(mockSendPaymentSending),
+        });
+
+      await expect(
+        client.sendPayment(
+          {
+            organization_id: organizationId,
+            environment_id: environmentId,
+            payment: {
+              id: paymentId,
+              wallet_id: walletId,
+              currency: 'btc',
+              type: 'bolt11',
+              data: {
+                payment_request: 'lnbc1500n1p...',
+                amount_msats: 150000,
+                max_fee_msats: 1000,
+              },
+            },
+          },
+          {
+            maxAttempts: 2,
+            intervalMs: 100,
+            timeoutMs: 150,
+          }
+        )
+      ).rejects.toThrow('Send payment polling failed after 2 attempts');
+    });
+
+    it('should throw error when required parameters are missing', async () => {
+      await expect(
+        client.sendPayment({
+          organization_id: '',
+          environment_id: environmentId,
+          payment: {
+            id: paymentId,
+            wallet_id: walletId,
+            currency: 'btc',
+            type: 'bolt11',
+            data: {
+              payment_request: 'lnbc1500n1p...',
+              amount_msats: 150000,
+              max_fee_msats: 1000,
+            },
+          },
+        })
+      ).rejects.toThrow('organization_id and environment_id are required');
+
+      await expect(
+        client.sendPayment({
+          organization_id: organizationId,
+          environment_id: environmentId,
+          payment: null as any,
+        })
+      ).rejects.toThrow('payment data is required');
+    });
+
+    it('should auto-generate payment ID if not provided', async () => {
+      // Mock crypto.randomUUID for consistent testing
+      const mockUUID = 'auto-generated-uuid-123';
+      global.crypto = {
+        randomUUID: jest.fn().mockReturnValue(mockUUID),
+      } as any;
+
+      const mockPaymentWithAutoId = {
+        ...mockSendPaymentCompleted,
+        id: mockUUID,
+      };
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 202,
+          statusText: 'Accepted',
+          text: async () => '',
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => JSON.stringify(mockPaymentWithAutoId),
+        });
+
+      const payment = await client.sendPayment({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        payment: {
+          wallet_id: walletId,
+          currency: 'btc',
+          type: 'bolt11',
+          data: {
+            payment_request: 'lnbc1500n1p...',
+            amount_msats: 150000,
+            max_fee_msats: 1000,
+          },
+        },
+      });
+
+      expect(payment.id).toBe(mockUUID);
+    });
+  });
 });
