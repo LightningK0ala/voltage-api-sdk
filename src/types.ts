@@ -354,3 +354,34 @@ export interface GetPaymentsParams {
   start_date?: string; // ISO date string
   end_date?: string; // ISO date string
 }
+
+// Ledger Types
+export interface LedgerEvent {
+  type: 'credited' | 'captured' | 'held' | 'released';
+  hold_id?: string;
+  credit_id?: string;
+  payment_id: string;
+  amount_msats?: number;
+  currency: Currency;
+  effective_time: string;
+}
+
+export interface Ledger {
+  items: LedgerEvent[];
+  offset: number;
+  limit: number;
+  total: number;
+}
+
+// Wallet Ledger Parameters
+export interface GetWalletLedgerParams {
+  organization_id?: string;
+  wallet_id: string;
+  offset?: number;
+  limit?: number;
+  payment_id?: string;
+  start_date?: string; // ISO date string
+  end_date?: string; // ISO date string
+  sort_key?: LedgerSortKey;
+  sort_order?: SortOrder;
+}

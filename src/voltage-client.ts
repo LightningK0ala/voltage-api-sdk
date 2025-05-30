@@ -11,10 +11,12 @@ import type {
   SendPaymentParams,
   GetPaymentParams,
   GetPaymentsParams,
+  GetWalletLedgerParams,
   ReceivePayment,
   SendPayment,
   Payment,
   Payments,
+  Ledger,
   PollingConfig,
 } from './types';
 
@@ -385,6 +387,36 @@ export class VoltageClient {
     }
 
     throw new Error(`Send payment polling failed after ${config.maxAttempts} attempts`);
+  }
+
+  /**
+   * Get a wallet's transaction history (ledger)
+   * @param params - Parameters containing organization_id, wallet_id, and optional filters
+   * @returns Promise resolving to paginated ledger events
+   */
+  async getWalletLedger(params: GetWalletLedgerParams): Promise<Ledger> {
+    const { organization_id, wallet_id, ...filters } = params;
+
+    if (!organization_id || !wallet_id) {
+      throw new Error('organization_id and wallet_id are required');
+    }
+
+    // Build query parameters
+    const queryParams = new URLSearchParams();
+
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        queryParams.append(key, value.toString());
+      }
+    });
+
+    const queryString = queryParams.toString();
+    const url = `/organizations/${organization_id}/wallets/${wallet_id}/ledger${
+      queryString ? `?${queryString}` : ''
+    }`;
+
+    const response = await this.httpClient.get<Ledger>(url);
+    return response.data;
   }
 
   /**

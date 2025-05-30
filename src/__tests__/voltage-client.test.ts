@@ -327,6 +327,171 @@ describe('VoltageClient', () => {
     });
   });
 
+  describe('getWalletLedger', () => {
+    const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
+    const walletId = '7a68a525-9d11-4c1e-a3dd-1c2bf1378ba2';
+
+    const mockLedger = {
+      items: [
+        {
+          type: 'credited',
+          credit_id: 'credit-123',
+          payment_id: 'payment-123',
+          amount_msats: 150000,
+          currency: 'btc',
+          effective_time: '2024-01-01T00:00:00Z',
+        },
+        {
+          type: 'held',
+          hold_id: 'hold-456',
+          payment_id: 'payment-456',
+          amount_msats: 100000,
+          currency: 'btc',
+          effective_time: '2024-01-02T00:00:00Z',
+        },
+      ],
+      offset: 0,
+      limit: 100,
+      total: 2,
+    };
+
+    beforeEach(() => {
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(mockLedger),
+      });
+    });
+
+    it('should get wallet ledger successfully without filters', async () => {
+      // Reset mock to ensure clean state
+      mockFetch.mockReset();
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(mockLedger),
+      });
+
+      const ledger = await client.getWalletLedger({
+        organization_id: organizationId,
+        wallet_id: walletId,
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/organizations/${organizationId}/wallets/${walletId}/ledger`,
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            'X-Api-Key': mockConfig.apiKey,
+            'Content-Type': 'application/json',
+          }),
+        })
+      );
+
+      expect(ledger).toEqual(mockLedger);
+    });
+
+    it('should get wallet ledger with pagination filters', async () => {
+      await client.getWalletLedger({
+        organization_id: organizationId,
+        wallet_id: walletId,
+        offset: 10,
+        limit: 50,
+      });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${mockConfig.baseUrl}/organizations/${organizationId}/wallets/${walletId}/ledger?offset=10&limit=50`,
+        expect.objectContaining({
+          method: 'GET',
+        })
+      );
+    });
+
+    it('should get wallet ledger with all filters', async () => {
+      await client.getWalletLedger({
+        organization_id: organizationId,
+        wallet_id: walletId,
+        offset: 0,
+        limit: 25,
+        payment_id: 'payment-123',
+        start_date: '2024-01-01T00:00:00Z',
+        end_date: '2024-01-31T23:59:59Z',
+        sort_key: 'effective_time',
+        sort_order: 'DESC',
+      });
+
+      const expectedUrl = `${mockConfig.baseUrl}/organizations/${organizationId}/wallets/${walletId}/ledger?offset=0&limit=25&payment_id=payment-123&start_date=2024-01-01T00%3A00%3A00Z&end_date=2024-01-31T23%3A59%3A59Z&sort_key=effective_time&sort_order=DESC`;
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        expectedUrl,
+        expect.objectContaining({
+          method: 'GET',
+        })
+      );
+    });
+
+    it('should throw error when required parameters are missing', async () => {
+      await expect(
+        client.getWalletLedger({
+          organization_id: '',
+          wallet_id: walletId,
+        })
+      ).rejects.toThrow('organization_id and wallet_id are required');
+
+      await expect(
+        client.getWalletLedger({
+          organization_id: organizationId,
+          wallet_id: '',
+        })
+      ).rejects.toThrow('organization_id and wallet_id are required');
+    });
+
+    it('should handle empty ledger results', async () => {
+      const emptyLedger = {
+        items: [],
+        offset: 0,
+        limit: 100,
+        total: 0,
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        text: async () => JSON.stringify(emptyLedger),
+      });
+
+      const ledger = await client.getWalletLedger({
+        organization_id: organizationId,
+        wallet_id: walletId,
+      });
+
+      expect(ledger).toEqual(emptyLedger);
+    });
+
+    it('should handle API errors', async () => {
+      const errorResponse = {
+        message: 'Wallet not found',
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        text: async () => JSON.stringify(errorResponse),
+      });
+
+      await expect(
+        client.getWalletLedger({
+          organization_id: organizationId,
+          wallet_id: walletId,
+        })
+      ).rejects.toThrow();
+    });
+  });
+
   describe('getPayments', () => {
     const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
     const environmentId = '123e4567-e89b-12d3-a456-426614174000';
