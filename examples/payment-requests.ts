@@ -129,6 +129,33 @@ async function main() {
       status: existingPayment.status,
       updatedAt: existingPayment.updated_at,
     });
+
+    // Example 6: Create a Taproot Asset payment request (generic asset)
+    console.log('Creating Taproot Asset payment request...');
+    const ASSET =
+      'asset:034d8de991e76a6994753ddb4505d354873f96a1aa400a82eac1ee4fd443cfd62e';
+
+    const taprootAssetPayment = await client.createPaymentRequest({
+      organization_id: organizationId,
+      environment_id: environmentId,
+      payment: {
+        id: crypto.randomUUID(),
+        wallet_id: walletId,
+        payment_kind: 'taprootasset',
+        amount: { currency: ASSET, amount: 1_000_000, unit: 'base units' },
+        description: 'Receive Taproot Asset',
+      } as any,
+    });
+
+    console.log('Taproot Asset payment ready:', {
+      paymentId: taprootAssetPayment.id,
+      paymentRequest:
+        taprootAssetPayment.type === 'taprootasset'
+          ? taprootAssetPayment.data.payment_request
+          : undefined,
+      status: taprootAssetPayment.status,
+      currency: taprootAssetPayment.currency,
+    });
   } catch (error) {
     console.error('Error creating payment request:', error);
 

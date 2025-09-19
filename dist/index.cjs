@@ -273,8 +273,8 @@ class VoltageClient {
                     throw new Error('Expected receive payment but got send payment');
                 }
                 const receivePayment = payment;
-                // Check if payment is ready (not generating)
-                if (receivePayment.status !== 'generating') {
+                // Check if payment is ready (not in transient states)
+                if (receivePayment.status !== 'generating' && receivePayment.status !== 'approved') {
                     // If payment failed, throw error
                     if (receivePayment.status === 'failed') {
                         let errorMessage = 'Payment generation failed';
@@ -367,8 +367,8 @@ class VoltageClient {
                     throw new Error('Expected send payment but got receive payment');
                 }
                 const sendPayment = payment;
-                // Check if payment is complete (not sending)
-                if (sendPayment.status !== 'sending') {
+                // Check if payment is complete (not in transient states)
+                if (sendPayment.status !== 'sending' && sendPayment.status !== 'approved') {
                     // If payment failed, throw error
                     if (sendPayment.status === 'failed') {
                         let errorMessage = 'Send payment failed';

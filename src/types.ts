@@ -20,7 +20,8 @@ export interface ApiError {
 }
 
 // Currency and Amount Types
-export type Currency = 'btc' | 'usd';
+export type AssetCurrency = `asset:${string}`;
+export type Currency = 'btc' | 'usd' | AssetCurrency;
 
 export interface BtcAmount {
   amount: number;
@@ -99,10 +100,16 @@ export type WalletEventError =
   | { type: 'InsufficientLimit'; detail: string };
 
 // Payment Types
-export type PaymentKind = 'bolt11' | 'onchain' | 'bip21';
+export type PaymentKind = 'bolt11' | 'onchain' | 'bip21' | 'taprootasset';
 export type PaymentDirection = 'send' | 'receive';
-export type SendStatus = 'sending' | 'failed' | 'completed';
-export type ReceiveStatus = 'generating' | 'receiving' | 'expired' | 'failed' | 'completed';
+export type SendStatus = 'sending' | 'approved' | 'failed' | 'completed';
+export type ReceiveStatus =
+  | 'approved'
+  | 'generating'
+  | 'receiving'
+  | 'expired'
+  | 'failed'
+  | 'completed';
 
 // On-chain Receipt Types
 export interface OnChainPaymentReceipt {
@@ -164,10 +171,26 @@ export interface SendBip21PaymentData {
 }
 
 // Payment Type Unions
+export interface AssetAmount {
+  amount: number;
+  currency: AssetCurrency;
+  unit: 'base units';
+}
+
+export interface TaprootAssetPaymentData {
+  payment_request?: string | null;
+  amount: AssetAmount;
+  asset: string; // group key without 'asset:' prefix
+  quote?: unknown; // Quote details are opaque to the SDK for now
+  memo?: string | null;
+  expiration?: string | null;
+}
+
 export type PaymentReceiveType =
   | { type: 'bolt11'; data: BoltPaymentData }
   | { type: 'onchain'; data: OnChainPaymentData }
-  | { type: 'bip21'; data: Bip21PaymentData };
+  | { type: 'bip21'; data: Bip21PaymentData }
+  | { type: 'taprootasset'; data: TaprootAssetPaymentData };
 
 export type PaymentSendType =
   | { type: 'bolt11'; data: SendBoltPaymentData }
@@ -237,10 +260,12 @@ export type Payments = PaginatedResponse<Payment>;
 export interface ReceivePaymentRequest {
   id?: string;
   wallet_id: string;
-  currency: Currency;
+  currency?: Currency;
   amount_msats?: number | null;
   payment_kind: PaymentKind;
   description?: string | null;
+  // For taproot assets, include structured amount
+  amount?: AssetAmount;
 }
 
 // Send Payment Request Types

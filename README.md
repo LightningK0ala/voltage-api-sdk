@@ -476,6 +476,68 @@ See the [examples](./examples) directory for more usage examples:
 - [Basic Usage](./examples/basic-usage.ts) - Complete example with environment variables
 - [Payment Requests](./examples/payment-requests.ts) - Complete examples for creating payment requests
 
+### Taproot Assets (Generic)
+
+The API supports Taproot Assets on supported networks (e.g., mutinynet). The SDK works with any Taproot Asset by using the asset group key string in the `asset:` currency format.
+
+Receive a Taproot Asset payment (generic):
+
+```typescript
+import { VoltageClient } from 'voltage-api-sdk';
+
+const client = new VoltageClient({ apiKey: process.env.VOLTAGE_API_KEY });
+
+// Replace with the asset group key you want to receive
+const ASSET = 'asset:034d8de991e76a6994753ddb4505d354873f96a1aa400a82eac1ee4fd443cfd62e';
+
+const payment = await client.createPaymentRequest({
+  organization_id: process.env.VOLTAGE_ORGANIZATION_ID!,
+  environment_id: process.env.VOLTAGE_ENVIRONMENT_ID!,
+  payment: {
+    // id is optional; auto-generated if omitted
+    wallet_id: process.env.VOLTAGE_WALLET_ID!,
+    payment_kind: 'taprootasset',
+    // For Taproot Assets, specify the Amount with currency as the asset group key
+    amount: { currency: ASSET, amount: 1_000_000, unit: 'base units' },
+    description: 'Receive Taproot Asset',
+  },
+});
+
+// payment.type === 'taprootasset'
+console.log('Taproot Asset invoice:', payment.data.payment_request);
+```
+
+Send a Taproot Asset payment (generic):
+
+```typescript
+import { VoltageClient } from 'voltage-api-sdk';
+
+const client = new VoltageClient({ apiKey: process.env.VOLTAGE_API_KEY });
+const ASSET = 'asset:034d8de991e76a6994753ddb4505d354873f96a1aa400a82eac1ee4fd443cfd62e';
+
+const result = await client.sendPayment({
+  organization_id: process.env.VOLTAGE_ORGANIZATION_ID!,
+  environment_id: process.env.VOLTAGE_ENVIRONMENT_ID!,
+  payment: {
+    // id is optional; auto-generated if omitted
+    wallet_id: process.env.VOLTAGE_WALLET_ID!,
+    currency: ASSET,
+    type: 'taprootasset',
+    data: {
+      payment_request: '<taproot-asset-invoice>',
+      asset: '034d8de991e76a6994753ddb4505d354873f96a1aa400a82eac1ee4fd443cfd62e', // group key without `asset:` prefix
+      amount: { currency: ASSET, amount: 1_000_000, unit: 'base units' },
+      // max_fee can be in BTC msats or asset base units depending on route
+      max_fee: { currency: 'btc', amount: 10_000 },
+    },
+  },
+});
+
+console.log('Send status:', result.status);
+```
+
+Note on statuses: the API may return a transient `approved` state before generation or completion. The SDK automatically treats `approved` as a loading state during polling.
+
 ## Security Best Practices
 
 - ✅ **Use environment variables** for API keys and sensitive data

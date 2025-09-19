@@ -15,7 +15,8 @@ export interface ApiError {
     code?: string;
     details?: unknown;
 }
-export type Currency = 'btc' | 'usd';
+export type AssetCurrency = `asset:${string}`;
+export type Currency = 'btc' | 'usd' | AssetCurrency;
 export interface BtcAmount {
     amount: number;
     currency: 'btc';
@@ -81,10 +82,10 @@ export type WalletEventError = {
     type: 'InsufficientLimit';
     detail: string;
 };
-export type PaymentKind = 'bolt11' | 'onchain' | 'bip21';
+export type PaymentKind = 'bolt11' | 'onchain' | 'bip21' | 'taprootasset';
 export type PaymentDirection = 'send' | 'receive';
-export type SendStatus = 'sending' | 'failed' | 'completed';
-export type ReceiveStatus = 'generating' | 'receiving' | 'expired' | 'failed' | 'completed';
+export type SendStatus = 'sending' | 'approved' | 'failed' | 'completed';
+export type ReceiveStatus = 'approved' | 'generating' | 'receiving' | 'expired' | 'failed' | 'completed';
 export interface OnChainPaymentReceipt {
     required_confirmations_num: number;
     tx_id?: string;
@@ -134,6 +135,19 @@ export interface SendBip21PaymentData {
     description?: string | null;
     outflows: OnChainPaymentReceipt[];
 }
+export interface AssetAmount {
+    amount: number;
+    currency: AssetCurrency;
+    unit: 'base units';
+}
+export interface TaprootAssetPaymentData {
+    payment_request?: string | null;
+    amount: AssetAmount;
+    asset: string;
+    quote?: unknown;
+    memo?: string | null;
+    expiration?: string | null;
+}
 export type PaymentReceiveType = {
     type: 'bolt11';
     data: BoltPaymentData;
@@ -143,6 +157,9 @@ export type PaymentReceiveType = {
 } | {
     type: 'bip21';
     data: Bip21PaymentData;
+} | {
+    type: 'taprootasset';
+    data: TaprootAssetPaymentData;
 };
 export type PaymentSendType = {
     type: 'bolt11';
@@ -214,10 +231,11 @@ export type Payments = PaginatedResponse<Payment>;
 export interface ReceivePaymentRequest {
     id?: string;
     wallet_id: string;
-    currency: Currency;
+    currency?: Currency;
     amount_msats?: number | null;
     payment_kind: PaymentKind;
     description?: string | null;
+    amount?: AssetAmount;
 }
 export interface SendBolt11PaymentRequest {
     payment_request: string;

@@ -247,8 +247,8 @@ export class VoltageClient {
 
         const receivePayment = payment as ReceivePayment;
 
-        // Check if payment is ready (not generating)
-        if (receivePayment.status !== 'generating') {
+        // Check if payment is ready (not in transient states)
+        if (receivePayment.status !== 'generating' && receivePayment.status !== 'approved') {
           // If payment failed, throw error
           if (receivePayment.status === 'failed') {
             let errorMessage = 'Payment generation failed';
@@ -369,8 +369,8 @@ export class VoltageClient {
 
         const sendPayment = payment as SendPayment;
 
-        // Check if payment is complete (not sending)
-        if (sendPayment.status !== 'sending') {
+        // Check if payment is complete (not in transient states)
+        if (sendPayment.status !== 'sending' && sendPayment.status !== 'approved') {
           // If payment failed, throw error
           if (sendPayment.status === 'failed') {
             let errorMessage = 'Send payment failed';

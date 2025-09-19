@@ -293,6 +293,91 @@ describe('VoltageClient', () => {
         })
       ).rejects.toThrow('organization_id and environment_id are required');
     });
+
+    it('should create taprootasset receive payment and poll through approved to receiving', async () => {
+      const ASSET = 'asset:034d8de991e76a6994753ddb4505d354873f96a1aa400a82eac1ee4fd443cfd62e';
+      const paymentId2 = 'payment-taproot-1';
+
+      // Mock the POST request (returns 202)
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        status: 202,
+        statusText: 'Accepted',
+        text: async () => '',
+      });
+
+      const mockApproved = {
+        id: paymentId2,
+        wallet_id: walletId,
+        organization_id: organizationId,
+        environment_id: environmentId,
+        created_at: '2025-09-19T08:26:41.488174Z',
+        updated_at: '2025-09-19T08:26:41.488174Z',
+        currency: ASSET,
+        status: 'approved',
+        direction: 'receive',
+        type: 'taprootasset',
+        data: {
+          amount: { amount: 1000000, currency: ASSET, unit: 'base units' },
+          asset: '034d8de991e76a6994753ddb4505d354873f96a1aa400a82eac1ee4fd443cfd62e',
+          payment_request: null,
+          memo: null,
+          expiration: null,
+        },
+      };
+
+      const mockReceiving = {
+        ...mockApproved,
+        status: 'receiving',
+        data: {
+          ...mockApproved.data,
+          payment_request:
+            'lntbs8543160p1p5v6y7zpp58unxpygaeqehqls2ye3n4xf9qctjj7r2689mfdhsk8kgp9f00f9sdqqcq',
+          quote: {
+            type: 'peer_rfq',
+            detail: {
+              from: ASSET,
+              to: 'btc',
+              peer: '022a84109569905eacd61635b82fc3c3add718c2860af3fefcf5a32b4a717a61fd',
+              channel_scids: [1786556131],
+              expires_at: '2025-09-19T08:31:41Z',
+              rfq: { id: [1, 2, 3], rate: '117052700000x10^0' },
+            },
+          },
+        },
+      };
+
+      // Mock the GET requests (polling): approved -> receiving
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => JSON.stringify(mockApproved),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => JSON.stringify(mockReceiving),
+        });
+
+      const payment = await client.createPaymentRequest({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        payment: {
+          id: paymentId2,
+          wallet_id: walletId,
+          payment_kind: 'taprootasset',
+          amount: { currency: ASSET, amount: 1000000, unit: 'base units' },
+          description: 'Receive Taproot Asset',
+        } as any,
+      });
+
+      expect(payment.type).toBe('taprootasset');
+      expect(payment.status).toBe('receiving');
+      expect(payment.currency).toBe(ASSET);
+    });
   });
 
   describe('getPayment', () => {
@@ -1162,6 +1247,71 @@ describe('VoltageClient', () => {
       });
 
       expect(payment.id).toBe(mockUUID);
+    });
+
+    it('should poll through approved state for send payments', async () => {
+      const organizationId = 'd27b642f-817c-4541-9215-3fc321e232af';
+      const environmentId = '123e4567-e89b-12d3-a456-426614174000';
+      const walletId = '7a68a525-9d11-4c1e-a3dd-1c2bf1378ba2';
+      const paymentId = 'send-appro-1';
+
+      const mockApprovedSend = {
+        id: paymentId,
+        wallet_id: walletId,
+        organization_id: organizationId,
+        environment_id: environmentId,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:01Z',
+        currency: 'btc',
+        status: 'approved',
+        direction: 'send',
+        type: 'bolt11',
+        data: {
+          payment_request: 'lnbc1500n1p...',
+          amount_msats: 150000,
+          max_fee_msats: 1000,
+        },
+      };
+
+      const mockCompletedSend = { ...mockApprovedSend, status: 'completed' };
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 202,
+          statusText: 'Accepted',
+          text: async () => '',
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => JSON.stringify(mockApprovedSend),
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          statusText: 'OK',
+          text: async () => JSON.stringify(mockCompletedSend),
+        });
+
+      const payment = await client.sendPayment({
+        organization_id: organizationId,
+        environment_id: environmentId,
+        payment: {
+          id: paymentId,
+          wallet_id: walletId,
+          currency: 'btc',
+          type: 'bolt11',
+          data: {
+            payment_request: 'lnbc1500n1p...',
+            amount_msats: 150000,
+            max_fee_msats: 1000,
+          },
+        } as any,
+      });
+
+      expect(payment.status).toBe('completed');
     });
   });
 
