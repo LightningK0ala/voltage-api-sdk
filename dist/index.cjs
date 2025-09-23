@@ -30,7 +30,7 @@ class HttpClient {
             headers['Authorization'] = `Bearer ${this.bearerToken}`;
         }
         else if (this.apiKey) {
-            headers['X-Api-Key'] = this.apiKey;
+            headers['x-api-key'] = this.apiKey;
         }
         return headers;
     }
